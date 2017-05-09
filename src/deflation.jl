@@ -28,8 +28,10 @@ function process(::Type{Read}, codec::ZstdDeflation, source::IO, output::Ptr{UIn
     fillbuffer!(source, state)
     cstream = codec.cstream
     cstream.ibuffer.src = bufferptr(state)
+    cstream.ibuffer.pos = 0
     cstream.ibuffer.size = buffersize(state)
     cstream.obuffer.dst = output
+    cstream.obuffer.pos = 0
     cstream.obuffer.size = nbytes
 
     # deflate data
@@ -55,8 +57,10 @@ function process(::Type{Write}, codec::ZstdDeflation, sink::IO, input::Ptr{UInt8
     flushbuffer!(sink, state)
     cstream = codec.cstream
     cstream.ibuffer.src = input
+    cstream.ibuffer.pos = 0
     cstream.ibuffer.size = nbytes
     cstream.obuffer.dst = marginptr(state)
+    cstream.obuffer.pos = 0
     cstream.obuffer.size = marginsize(state)
 
     # deflate data
@@ -75,6 +79,7 @@ function finish(::Type{Write}, codec::ZstdDeflation, sink::IO)
     while true
         flushbuffer!(sink, state)
         cstream.obuffer.dst = marginptr(state)
+        cstream.obuffer.pos = 0
         cstream.obuffer.size = marginsize(state)
         code = finish!(cstream)
         state.marginpos += cstream.obuffer.pos

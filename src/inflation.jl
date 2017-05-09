@@ -26,8 +26,10 @@ function process(::Type{Read}, codec::ZstdInflation, source::IO, output::Ptr{UIn
     dstream = codec.dstream
     dstream.ibuffer.src = bufferptr(state)
     dstream.ibuffer.size = buffersize(state)
+    dstream.ibuffer.pos = 0
     dstream.obuffer.dst = output
     dstream.obuffer.size = nbytes
+    dstream.obuffer.pos = 0
 
     # inflate data
     code = decompress!(dstream)
@@ -45,8 +47,10 @@ function process(::Type{Write}, codec::ZstdInflation, sink::IO, input::Ptr{UInt8
     flushbuffer!(sink, state)
     dstream = codec.dstream
     dstream.ibuffer.src = input
+    dstream.ibuffer.pos = 0
     dstream.ibuffer.size = nbytes
     dstream.obuffer.dst = marginptr(state)
+    dstream.obuffer.pos = 0
     dstream.obuffer.size = marginsize(state)
 
     # inflate data
