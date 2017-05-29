@@ -1,26 +1,18 @@
 module CodecZstd
 
 export
-    ZstdInflation,
-    ZstdInflationStream,
-    ZstdDeflation,
-    ZstdDeflationStream
+    ZstdCompression,
+    ZstdCompressionStream,
+    ZstdDecompression,
+    ZstdDecompressionStream
 
 import TranscodingStreams:
     TranscodingStreams,
-    Codec,
-    Read,
-    Write,
-    ProcCode,
-    PROC_OK,
-    PROC_FINISH,
     TranscodingStream,
-    process,
-    finish
+    Memory
 
-include("lowlevel.jl")
-include("state.jl")
-include("inflation.jl")
-include("deflation.jl")
+include("libzstd.jl")
+include("compression.jl")
+include("decompression.jl")
 
 end # module
