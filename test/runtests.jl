@@ -1,6 +1,6 @@
 using CodecZstd
 using Base.Test
-import TranscodingStreams: test_roundtrip_read, test_roundtrip_write
+import TranscodingStreams
 
 const testdir = dirname(@__FILE__)
 
@@ -10,6 +10,7 @@ const testdir = dirname(@__FILE__)
     @test read(stream) == b"foo"
     close(stream)
 
-    test_roundtrip_read(ZstdCompressionStream, ZstdDecompressionStream)
-    test_roundtrip_write(ZstdCompressionStream, ZstdDecompressionStream)
+    TranscodingStreams.test_roundtrip_read(ZstdCompressionStream, ZstdDecompressionStream)
+    TranscodingStreams.test_roundtrip_write(ZstdCompressionStream, ZstdDecompressionStream)
+    TranscodingStreams.test_roundtrip_transcode(ZstdCompression, ZstdDecompression)
 end
