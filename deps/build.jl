@@ -14,4 +14,9 @@ if is_apple()
     provides(Homebrew.HB, "zstd", libzstd, os=:Darwin)
 end
 
+# FIXME: temporal hack to make CI happy; dependencies should be declared in REQUIRE.
+if Pkg.installed("TranscodingStreams") === nothing
+    Pkg.clone("https://github.com/bicycle1885/TranscodingStreams.jl")
+end
+
 @BinDeps.install Dict(:libzstd=>:libzstd)
