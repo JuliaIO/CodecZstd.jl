@@ -1,7 +1,8 @@
 # Low-level Interfaces
 # ====================
 
-const libzstd = "libzstd"
+# load libzstd
+include("../deps/deps.jl")
 
 function iserror(code::Csize_t)
     return ccall((:ZSTD_isError, libzstd), Cuint, (Csize_t,), code) != 0
