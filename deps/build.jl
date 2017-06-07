@@ -3,20 +3,17 @@ using BinDeps
 BinDeps.@setup
 
 libzstd = library_dependency("libzstd")
+version = "1.2.0"
+source  = "https://github.com/facebook/zstd/archive/v$(version).tar.gz"
 
-provides(AptGet, Dict("zstd"=>libzstd))
-
-if is_apple()
-    if Pkg.installed("Homebrew") === nothing
-        Pkg.add("Homebrew")
-    end
-    import Homebrew
-    provides(Homebrew.HB, "zstd", libzstd, os=:Darwin)
-end
-
-# FIXME: temporal hack to make CI happy; dependencies should be declared in REQUIRE.
-if Pkg.installed("TranscodingStreams") === nothing
-    Pkg.clone("https://github.com/bicycle1885/TranscodingStreams.jl")
-end
+prefix = joinpath(dirname(@__FILE__), "usr")
+provides(Sources, URI(source), libzstd, unpacked_dir="zstd-$(version)")
+provides(
+    SimpleBuild,
+    (@build_steps begin
+        GetSources(libzstd)
+        ChangeDirectory(joinpath(BinDeps.depsdir(libzstd), "src", "zstd-$(version)"))
+        MakeTargets(["PREFIX=$(prefix)", "install"])
+    end), libzstd)
 
 @BinDeps.install Dict(:libzstd=>:libzstd)
