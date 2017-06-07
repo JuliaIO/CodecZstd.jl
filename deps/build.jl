@@ -12,8 +12,10 @@ provides(
     SimpleBuild,
     (@build_steps begin
         GetSources(libzstd)
-        ChangeDirectory(joinpath(BinDeps.depsdir(libzstd), "src", "zstd-$(version)"))
-        MakeTargets(["PREFIX=$(prefix)", "install"])
+        @build_steps begin
+            ChangeDirectory(joinpath(BinDeps.depsdir(libzstd), "src", "zstd-$(version)"))
+            MakeTargets(["PREFIX=$(prefix)", "install"])
+        end
     end), libzstd)
 
 @BinDeps.install Dict(:libzstd=>:libzstd)
