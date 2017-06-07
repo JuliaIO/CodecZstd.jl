@@ -8,6 +8,11 @@ function iserror(code::Csize_t)
     return ccall((:ZSTD_isError, libzstd), Cuint, (Csize_t,), code) != 0
 end
 
+function zstderror(stream, code::Csize_t)
+    ptr = ccall((:ZSTD_getErrorName, libzstd), Cstring, (Csize_t,), code)
+    error("zstd error: ", unsafe_string(ptr))
+end
+
 # ZSTD_outBuffer
 mutable struct InBuffer
     src::Ptr{Void}
@@ -31,7 +36,7 @@ mutable struct OutBuffer
 end
 
 # ZSTD_CStream
-struct CStream
+mutable struct CStream
     ptr::Ptr{Void}
     ibuffer::InBuffer
     obuffer::OutBuffer
@@ -62,7 +67,7 @@ function free!(cstream::CStream)
 end
 
 # ZSTD_DStream
-struct DStream
+mutable struct DStream
     ptr::Ptr{Void}
     ibuffer::InBuffer
     obuffer::OutBuffer

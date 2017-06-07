@@ -16,7 +16,7 @@ function ZstdDecompression()
     return ZstdDecompression(dstream)
 end
 
-const ZstdDecompressionStream{S} = TranscodingStream{ZstdDecompression,S} where S<:IO
+const ZstdDecompressionStream{S} = TranscodingStream{ZstdDecompression,S}
 
 """
     ZstdDecompressionStream(stream::IO)
@@ -25,6 +25,33 @@ Create a new zstd decompression stream.
 """
 function ZstdDecompressionStream(stream::IO)
     return TranscodingStream(ZstdDecompression(), stream)
+end
+
+
+# Methods
+# -------
+
+function TranscodingStreams.initialize(codec::ZstdDecompression)
+    code = initialize!(codec.dstream)
+    if iserror(code)
+        zstderror(codec.dstream, code)
+    end
+    finalizer(codec.dstream, safefree!)
+end
+
+function TranscodingStreams.finalize(codec::ZstdDecompression)
+    safefree!(codec.dstream)
+end
+
+function safefree!(dstream::DStream)
+    if dstream.ptr != C_NULL
+        code = free!(dstream)
+        if iserror(code)
+            zstderror(dstream, code)
+        end
+        dstream.ptr = C_NULL
+    end
+    return
 end
 
 function TranscodingStreams.startproc(codec::ZstdDecompression, ::Symbol)
@@ -48,12 +75,4 @@ function TranscodingStreams.process(codec::ZstdDecompression, input::Memory, out
         Δout = Int(dstream.obuffer.pos)
         return Δin, Δout, code == 0 ? :end : :ok
     end
-end
-
-function TranscodingStreams.finalize(codec::ZstdDecompression)
-    code = free!(codec.dstream)
-    if iserror(code)
-        error("zstd error")
-    end
-    return
 end

@@ -3,6 +3,7 @@
 
 struct ZstdCompression <: TranscodingStreams.Codec
     cstream::CStream
+    level::Int
 end
 
 # Same as the zstd command line tool (v1.2.0).
@@ -14,12 +15,10 @@ const DEFAULT_COMPRESSION_LEVEL = 3
 Create a new zstd compression codec.
 """
 function ZstdCompression(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
-    cstream = CStream()
-    initialize!(cstream, level)
-    return ZstdCompression(cstream)
+    return ZstdCompression(CStream(), level)
 end
 
-const ZstdCompressionStream{S} = TranscodingStream{ZstdCompression,S} where S<:IO
+const ZstdCompressionStream{S} = TranscodingStream{ZstdCompression,S}
 
 """
     ZstdCompressionStream(stream::IO)
@@ -28,6 +27,33 @@ Create a new zstd compression stream.
 """
 function ZstdCompressionStream(stream::IO)
     return TranscodingStream(ZstdCompression(), stream)
+end
+
+
+# Methods
+# -------
+
+function TranscodingStreams.initialize(codec::ZstdCompression)
+    code = initialize!(codec.cstream, codec.level)
+    if iserror(code)
+        zstderror(codec.cstream, code)
+    end
+    finalizer(codec.cstream, safefree!)
+end
+
+function TranscodingStreams.finalize(codec::ZstdCompression)
+    safefree!(codec.cstream)
+end
+
+function safefree!(cstream::CStream)
+    if cstream.ptr != C_NULL
+        code = free!(cstream)
+        if iserror(code)
+            zstderror(cstream, code)
+        end
+        cstream.ptr = C_NULL
+    end
+    return
 end
 
 function TranscodingStreams.startproc(codec::ZstdCompression, ::Symbol)
@@ -55,12 +81,4 @@ function TranscodingStreams.process(codec::ZstdCompression, input::Memory, outpu
         Δout = Int(cstream.obuffer.pos)
         return Δin, Δout, input.size == 0 && code == 0 ? :end : :ok
     end
-end
-
-function TranscodingStreams.finalize(codec::ZstdCompression)
-    code = free!(codec.cstream)
-    if iserror(code)
-        error("zstd error")
-    end
-    return
 end
