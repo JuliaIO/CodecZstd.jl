@@ -11,9 +11,7 @@ end
 Create a new zstd decompression codec.
 """
 function ZstdDecompression()
-    dstream = DStream()
-    initialize!(dstream)
-    return ZstdDecompression(dstream)
+    return ZstdDecompression(DStream())
 end
 
 const ZstdDecompressionStream{S} = TranscodingStream{ZstdDecompression,S}
