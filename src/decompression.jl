@@ -54,11 +54,6 @@ function safefree!(dstream::DStream)
     return
 end
 
-function TranscodingStreams.startproc(codec::ZstdDecompression, ::Symbol)
-    # TODO: need to reset codec?
-    return :ok
-end
-
 function TranscodingStreams.process(codec::ZstdDecompression, input::Memory, output::Memory)
     dstream = codec.dstream
     dstream.ibuffer.src = input.ptr
