@@ -9,5 +9,6 @@ import TranscodingStreams
 
     TranscodingStreams.test_roundtrip_read(ZstdCompressionStream, ZstdDecompressionStream)
     TranscodingStreams.test_roundtrip_write(ZstdCompressionStream, ZstdDecompressionStream)
+    TranscodingStreams.test_roundtrip_lines(ZstdCompressionStream, ZstdDecompressionStream)
     TranscodingStreams.test_roundtrip_transcode(ZstdCompression, ZstdDecompression)
 end
