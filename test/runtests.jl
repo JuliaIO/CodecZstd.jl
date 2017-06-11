@@ -7,6 +7,9 @@ import TranscodingStreams
     @test read(ZstdDecompressionStream(IOBuffer(data))) == b"foo"
     @test read(ZstdDecompressionStream(IOBuffer(vcat(data, data)))) == b"foofoo"
 
+    @test ZstdCompressionStream <: TranscodingStreams.TranscodingStream
+    @test ZstdDecompressionStream <: TranscodingStreams.TranscodingStream
+
     TranscodingStreams.test_roundtrip_read(ZstdCompressionStream, ZstdDecompressionStream)
     TranscodingStreams.test_roundtrip_write(ZstdCompressionStream, ZstdDecompressionStream)
     TranscodingStreams.test_roundtrip_lines(ZstdCompressionStream, ZstdDecompressionStream)

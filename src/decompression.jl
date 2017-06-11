@@ -14,7 +14,7 @@ function ZstdDecompression()
     return ZstdDecompression(DStream())
 end
 
-const ZstdDecompressionStream{S} = TranscodingStream{ZstdDecompression,S}
+const ZstdDecompressionStream{S} = TranscodingStream{ZstdDecompression,S} where S<:IO
 
 """
     ZstdDecompressionStream(stream::IO)

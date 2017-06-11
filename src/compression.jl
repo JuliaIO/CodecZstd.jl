@@ -25,7 +25,7 @@ function ZstdCompression(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     return ZstdCompression(CStream(), level)
 end
 
-const ZstdCompressionStream{S} = TranscodingStream{ZstdCompression,S}
+const ZstdCompressionStream{S} = TranscodingStream{ZstdCompression,S} where S<:IO
 
 """
     ZstdCompressionStream(stream::IO; kwargs...)
