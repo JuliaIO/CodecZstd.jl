@@ -13,20 +13,27 @@ const DEFAULT_COMPRESSION_LEVEL = 3
     ZstdCompression(;level=$(DEFAULT_COMPRESSION_LEVEL))
 
 Create a new zstd compression codec.
+
+Arguments
+---------
+- `level`: compression level (1..$(MAX_CLEVEL))
 """
 function ZstdCompression(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
+    if !(1 ≤ level ≤ MAX_CLEVEL)
+        throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
+    end
     return ZstdCompression(CStream(), level)
 end
 
 const ZstdCompressionStream{S} = TranscodingStream{ZstdCompression,S}
 
 """
-    ZstdCompressionStream(stream::IO)
+    ZstdCompressionStream(stream::IO; kwargs...)
 
-Create a new zstd compression stream.
+Create a new zstd compression stream (see `ZstdCompression` for `kwargs`).
 """
-function ZstdCompressionStream(stream::IO)
-    return TranscodingStream(ZstdCompression(), stream)
+function ZstdCompressionStream(stream::IO; kwargs...)
+    return TranscodingStream(ZstdCompression(;kwargs...), stream)
 end
 
 

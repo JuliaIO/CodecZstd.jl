@@ -13,6 +13,12 @@ function zstderror(stream, code::Csize_t)
     error("zstd error: ", unsafe_string(ptr))
 end
 
+function max_clevel()
+    return ccall((:ZSTD_maxCLevel, libzstd), Cint, ())
+end
+
+const MAX_CLEVEL = max_clevel()
+
 # ZSTD_outBuffer
 mutable struct InBuffer
     src::Ptr{Void}
