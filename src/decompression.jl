@@ -34,25 +34,21 @@ function TranscodingStreams.initialize(codec::ZstdDecompression)
     if iserror(code)
         zstderror(codec.dstream, code)
     end
-    finalizer(codec.dstream, safefree!)
+    return
 end
 
 function TranscodingStreams.finalize(codec::ZstdDecompression)
-    safefree!(codec.dstream)
-end
-
-function safefree!(dstream::DStream)
-    if dstream.ptr != C_NULL
-        code = free!(dstream)
+    if codec.dstream.ptr != C_NULL
+        code = free!(codec.dstream)
         if iserror(code)
-            zstderror(dstream, code)
+            zstderror(codec.dstream, code)
         end
-        dstream.ptr = C_NULL
+        codec.dstream.ptr = C_NULL
     end
     return
 end
 
-function TranscodingStreams.process(codec::ZstdDecompression, input::Memory, output::Memory)
+function TranscodingStreams.process(codec::ZstdDecompression, input::Memory, output::Memory, error::Error)
     dstream = codec.dstream
     dstream.ibuffer.src = input.ptr
     dstream.ibuffer.size = input.size
@@ -61,11 +57,12 @@ function TranscodingStreams.process(codec::ZstdDecompression, input::Memory, out
     dstream.obuffer.size = output.size
     dstream.obuffer.pos = 0
     code = decompress!(dstream)
+    Δin = Int(dstream.ibuffer.pos)
+    Δout = Int(dstream.obuffer.pos)
     if iserror(code)
-        error("zstd error")
+        error[] = ErrorException("zstd error")
+        return Δin, Δout, :error
     else
-        Δin = Int(dstream.ibuffer.pos)
-        Δout = Int(dstream.obuffer.pos)
         return Δin, Δout, code == 0 ? :end : :ok
     end
 end
