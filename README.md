@@ -5,6 +5,40 @@ CodecZstd.jl
 [![AppVeyor Status][appveyor-img]][appveyor-url]
 [![codecov.io][codecov-img]][codecov-url]
 
+## Installation
+
+```julia
+Pkg.add("CodecZstd")
+```
+
+## Usage
+
+```julia
+using CodecZstd
+
+# Some text.
+text = """
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean sollicitudin
+mauris non nisi consectetur, a dapibus urna pretium. Vestibulum non posuere
+erat. Donec luctus a turpis eget aliquet. Cras tristique iaculis ex, eu
+malesuada sem interdum sed. Vestibulum ante ipsum primis in faucibus orci luctus
+et ultrices posuere cubilia Curae; Etiam volutpat, risus nec gravida ultricies,
+erat ex bibendum ipsum, sed varius ipsum ipsum vitae dui.
+"""
+
+# Streaming API.
+stream = ZstdCompressionStream(IOBuffer(text))
+for line in eachline(ZstdDecompressionStream(stream))
+    println(line)
+end
+close(stream)
+
+# Array API.
+compressed = transcode(ZstdCompression(), text)
+@assert sizeof(compressed) < sizeof(text)
+@assert transcode(ZstdDecompression(), compressed) == Vector{UInt8}(text)
+```
+
 This package exports following codecs and streams:
 
 | Codec               | Stream                    |
