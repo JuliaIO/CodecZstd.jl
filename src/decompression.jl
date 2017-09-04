@@ -5,6 +5,10 @@ struct ZstdDecompression <: TranscodingStreams.Codec
     dstream::DStream
 end
 
+function Base.show(io::IO, codec::ZstdDecompression)
+    print(io, summary(codec), "()")
+end
+
 """
     ZstdDecompression()
 
