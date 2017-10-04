@@ -60,6 +60,10 @@ function initialize!(cstream::CStream, level::Integer)
     return ccall((:ZSTD_initCStream, libzstd), Csize_t, (Ptr{Void}, Cint), cstream.ptr, level)
 end
 
+function reset!(cstream::CStream, srcsize::Integer)
+    return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Void}, Culonglong), cstream.ptr, srcsize)
+end
+
 function compress!(cstream::CStream)
     return ccall((:ZSTD_compressStream, libzstd), Csize_t, (Ptr{Void}, Ptr{Void}, Ptr{Void}), cstream.ptr, pointer_from_objref(cstream.obuffer), pointer_from_objref(cstream.ibuffer))
 end
@@ -89,6 +93,10 @@ end
 
 function initialize!(dstream::DStream)
     return ccall((:ZSTD_initDStream, libzstd), Csize_t, (Ptr{Void},), dstream.ptr)
+end
+
+function reset!(dstream::DStream)
+    return ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{Void},), dstream.ptr)
 end
 
 function decompress!(dstream::DStream)
