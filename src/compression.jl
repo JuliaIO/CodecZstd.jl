@@ -6,6 +6,10 @@ struct ZstdCompression <: TranscodingStreams.Codec
     level::Int
 end
 
+function Base.show(io::IO, codec::ZstdCompression)
+    print(io, summary(codec), "(level=$(codec.level))")
+end
+
 # Same as the zstd command line tool (v1.2.0).
 const DEFAULT_COMPRESSION_LEVEL = 3
 
