@@ -59,6 +59,15 @@ function TranscodingStreams.finalize(codec::ZstdCompression)
     return
 end
 
+function TranscodingStreams.startproc(codec::ZstdCompression, mode::Symbol, error::Error)
+    code = reset!(codec.cstream, 0 #=unknown source size=#)
+    if iserror(code)
+        error[] = ErrorException("zstd error")
+        return :error
+    end
+    return :ok
+end
+
 function TranscodingStreams.process(codec::ZstdCompression, input::Memory, output::Memory, error::Error)
     cstream = codec.cstream
     cstream.ibuffer.src = input.ptr
