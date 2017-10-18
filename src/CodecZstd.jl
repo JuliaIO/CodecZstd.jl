@@ -20,4 +20,10 @@ include("libzstd.jl")
 include("compression.jl")
 include("decompression.jl")
 
+# Deprecations
+@deprecate ZstdCompression         ZstdCompressor
+@deprecate ZstdCompressionStream   ZstdCompressorStream
+@deprecate ZstdDecompression       ZstdDecompressor
+@deprecate ZstdDecompressionStream ZstdDecompressorStream
+
 end # module
