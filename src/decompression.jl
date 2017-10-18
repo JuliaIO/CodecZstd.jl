@@ -1,39 +1,39 @@
-# Decompression Codec
-# ===================
+# Decompressor Codec
+# ==================
 
-struct ZstdDecompression <: TranscodingStreams.Codec
+struct ZstdDecompressor <: TranscodingStreams.Codec
     dstream::DStream
 end
 
-function Base.show(io::IO, codec::ZstdDecompression)
+function Base.show(io::IO, codec::ZstdDecompressor)
     print(io, summary(codec), "()")
 end
 
 """
-    ZstdDecompression()
+    ZstdDecompressor()
 
 Create a new zstd decompression codec.
 """
-function ZstdDecompression()
-    return ZstdDecompression(DStream())
+function ZstdDecompressor()
+    return ZstdDecompressor(DStream())
 end
 
-const ZstdDecompressionStream{S} = TranscodingStream{ZstdDecompression,S} where S<:IO
+const ZstdDecompressorStream{S} = TranscodingStream{ZstdDecompressor,S} where S<:IO
 
 """
-    ZstdDecompressionStream(stream::IO)
+    ZstdDecompressorStream(stream::IO)
 
 Create a new zstd decompression stream.
 """
-function ZstdDecompressionStream(stream::IO)
-    return TranscodingStream(ZstdDecompression(), stream)
+function ZstdDecompressorStream(stream::IO)
+    return TranscodingStream(ZstdDecompressor(), stream)
 end
 
 
 # Methods
 # -------
 
-function TranscodingStreams.initialize(codec::ZstdDecompression)
+function TranscodingStreams.initialize(codec::ZstdDecompressor)
     code = initialize!(codec.dstream)
     if iserror(code)
         zstderror(codec.dstream, code)
@@ -41,7 +41,7 @@ function TranscodingStreams.initialize(codec::ZstdDecompression)
     return
 end
 
-function TranscodingStreams.finalize(codec::ZstdDecompression)
+function TranscodingStreams.finalize(codec::ZstdDecompressor)
     if codec.dstream.ptr != C_NULL
         code = free!(codec.dstream)
         if iserror(code)
@@ -52,7 +52,7 @@ function TranscodingStreams.finalize(codec::ZstdDecompression)
     return
 end
 
-function TranscodingStreams.startproc(codec::ZstdDecompression, mode::Symbol, error::Error)
+function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, error::Error)
     code = reset!(codec.dstream)
     if iserror(code)
         error[] = ErrorException("zstd error")
@@ -61,7 +61,7 @@ function TranscodingStreams.startproc(codec::ZstdDecompression, mode::Symbol, er
     return :ok
 end
 
-function TranscodingStreams.process(codec::ZstdDecompression, input::Memory, output::Memory, error::Error)
+function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, output::Memory, error::Error)
     dstream = codec.dstream
     dstream.ibuffer.src = input.ptr
     dstream.ibuffer.size = input.size

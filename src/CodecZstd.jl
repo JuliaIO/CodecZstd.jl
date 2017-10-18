@@ -3,10 +3,10 @@ __precompile__()
 module CodecZstd
 
 export
-    ZstdCompression,
-    ZstdCompressionStream,
-    ZstdDecompression,
-    ZstdDecompressionStream
+    ZstdCompressor,
+    ZstdCompressorStream,
+    ZstdDecompressor,
+    ZstdDecompressorStream
 
 import TranscodingStreams:
     TranscodingStreams,
