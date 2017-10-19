@@ -1,12 +1,12 @@
-# Compression Codec
-# =================
+# Compressor Codec
+# ================
 
-struct ZstdCompression <: TranscodingStreams.Codec
+struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
     level::Int
 end
 
-function Base.show(io::IO, codec::ZstdCompression)
+function Base.show(io::IO, codec::ZstdCompressor)
     print(io, summary(codec), "(level=$(codec.level))")
 end
 
@@ -14,7 +14,7 @@ end
 const DEFAULT_COMPRESSION_LEVEL = 3
 
 """
-    ZstdCompression(;level=$(DEFAULT_COMPRESSION_LEVEL))
+    ZstdCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
 
 Create a new zstd compression codec.
 
@@ -22,29 +22,29 @@ Arguments
 ---------
 - `level`: compression level (1..$(MAX_CLEVEL))
 """
-function ZstdCompression(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
+function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     if !(1 ≤ level ≤ MAX_CLEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
-    return ZstdCompression(CStream(), level)
+    return ZstdCompressor(CStream(), level)
 end
 
-const ZstdCompressionStream{S} = TranscodingStream{ZstdCompression,S} where S<:IO
+const ZstdCompressorStream{S} = TranscodingStream{ZstdCompressor,S} where S<:IO
 
 """
-    ZstdCompressionStream(stream::IO; kwargs...)
+    ZstdCompressorStream(stream::IO; kwargs...)
 
-Create a new zstd compression stream (see `ZstdCompression` for `kwargs`).
+Create a new zstd compression stream (see `ZstdCompressor` for `kwargs`).
 """
-function ZstdCompressionStream(stream::IO; kwargs...)
-    return TranscodingStream(ZstdCompression(;kwargs...), stream)
+function ZstdCompressorStream(stream::IO; kwargs...)
+    return TranscodingStream(ZstdCompressor(;kwargs...), stream)
 end
 
 
 # Methods
 # -------
 
-function TranscodingStreams.initialize(codec::ZstdCompression)
+function TranscodingStreams.initialize(codec::ZstdCompressor)
     code = initialize!(codec.cstream, codec.level)
     if iserror(code)
         zstderror(codec.cstream, code)
@@ -52,7 +52,7 @@ function TranscodingStreams.initialize(codec::ZstdCompression)
     return
 end
 
-function TranscodingStreams.finalize(codec::ZstdCompression)
+function TranscodingStreams.finalize(codec::ZstdCompressor)
     if codec.cstream.ptr != C_NULL
         code = free!(codec.cstream)
         if iserror(code)
@@ -63,7 +63,7 @@ function TranscodingStreams.finalize(codec::ZstdCompression)
     return
 end
 
-function TranscodingStreams.startproc(codec::ZstdCompression, mode::Symbol, error::Error)
+function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
     code = reset!(codec.cstream, 0 #=unknown source size=#)
     if iserror(code)
         error[] = ErrorException("zstd error")
@@ -72,7 +72,7 @@ function TranscodingStreams.startproc(codec::ZstdCompression, mode::Symbol, erro
     return :ok
 end
 
-function TranscodingStreams.process(codec::ZstdCompression, input::Memory, output::Memory, error::Error)
+function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, error::Error)
     cstream = codec.cstream
     cstream.ibuffer.src = input.ptr
     cstream.ibuffer.size = input.size
