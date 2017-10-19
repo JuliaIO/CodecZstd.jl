@@ -37,7 +37,8 @@ const ZstdCompressorStream{S} = TranscodingStream{ZstdCompressor,S} where S<:IO
 Create a new zstd compression stream (see `ZstdCompressor` for `kwargs`).
 """
 function ZstdCompressorStream(stream::IO; kwargs...)
-    return TranscodingStream(ZstdCompressor(;kwargs...), stream)
+    x, y = splitkwargs(kwargs, (:level,))
+    return TranscodingStream(ZstdCompressor(;x...), stream; y...)
 end
 
 
