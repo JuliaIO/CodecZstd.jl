@@ -21,12 +21,12 @@ end
 const ZstdDecompressorStream{S} = TranscodingStream{ZstdDecompressor,S} where S<:IO
 
 """
-    ZstdDecompressorStream(stream::IO)
+    ZstdDecompressorStream(stream::IO; kwargs...)
 
-Create a new zstd decompression stream.
+Create a new zstd decompression stream (`kwargs` are passed to `TranscodingStream`).
 """
-function ZstdDecompressorStream(stream::IO)
-    return TranscodingStream(ZstdDecompressor(), stream)
+function ZstdDecompressorStream(stream::IO; kwargs...)
+    return TranscodingStream(ZstdDecompressor(), stream; kwargs...)
 end
 
 
