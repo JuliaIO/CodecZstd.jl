@@ -3,7 +3,7 @@ using BinDeps
 BinDeps.@setup
 
 libzstd = library_dependency("libzstd")
-version = "1.3.0"
+version = "1.3.4"
 source  = "https://github.com/facebook/zstd/archive/v$(version).tar.gz"
 
 prefix = joinpath(dirname(@__FILE__), "usr")
