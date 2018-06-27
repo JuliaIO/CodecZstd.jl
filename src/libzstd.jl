@@ -21,7 +21,7 @@ const MAX_CLEVEL = max_clevel()
 
 # ZSTD_outBuffer
 mutable struct InBuffer
-    src::Ptr{Void}
+    src::Ptr{Cvoid}
     size::Csize_t
     pos::Csize_t
 
@@ -32,7 +32,7 @@ end
 
 # ZSTD_inBuffer
 mutable struct OutBuffer
-    dst::Ptr{Void}
+    dst::Ptr{Cvoid}
     size::Csize_t
     pos::Csize_t
 
@@ -43,12 +43,12 @@ end
 
 # ZSTD_CStream
 mutable struct CStream
-    ptr::Ptr{Void}
+    ptr::Ptr{Cvoid}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
     function CStream()
-        ptr = ccall((:ZSTD_createCStream, libzstd), Ptr{Void}, ())
+        ptr = ccall((:ZSTD_createCStream, libzstd), Ptr{Cvoid}, ())
         if ptr == C_NULL
             throw(OutOfMemoryError())
         end
@@ -57,33 +57,33 @@ mutable struct CStream
 end
 
 function initialize!(cstream::CStream, level::Integer)
-    return ccall((:ZSTD_initCStream, libzstd), Csize_t, (Ptr{Void}, Cint), cstream.ptr, level)
+    return ccall((:ZSTD_initCStream, libzstd), Csize_t, (Ptr{Cvoid}, Cint), cstream.ptr, level)
 end
 
 function reset!(cstream::CStream, srcsize::Integer)
-    return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Void}, Culonglong), cstream.ptr, srcsize)
+    return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
 end
 
 function compress!(cstream::CStream)
-    return ccall((:ZSTD_compressStream, libzstd), Csize_t, (Ptr{Void}, Ptr{Void}, Ptr{Void}), cstream.ptr, pointer_from_objref(cstream.obuffer), pointer_from_objref(cstream.ibuffer))
+    return ccall((:ZSTD_compressStream, libzstd), Csize_t, (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{Cvoid}), cstream.ptr, pointer_from_objref(cstream.obuffer), pointer_from_objref(cstream.ibuffer))
 end
 
 function finish!(cstream::CStream)
-    return ccall((:ZSTD_endStream, libzstd), Csize_t, (Ptr{Void}, Ptr{Void}), cstream.ptr, pointer_from_objref(cstream.obuffer))
+    return ccall((:ZSTD_endStream, libzstd), Csize_t, (Ptr{Cvoid}, Ptr{Cvoid}), cstream.ptr, pointer_from_objref(cstream.obuffer))
 end
 
 function free!(cstream::CStream)
-    return ccall((:ZSTD_freeCStream, libzstd), Csize_t, (Ptr{Void},), cstream.ptr)
+    return ccall((:ZSTD_freeCStream, libzstd), Csize_t, (Ptr{Cvoid},), cstream.ptr)
 end
 
 # ZSTD_DStream
 mutable struct DStream
-    ptr::Ptr{Void}
+    ptr::Ptr{Cvoid}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
     function DStream()
-        ptr = ccall((:ZSTD_createDStream, libzstd), Ptr{Void}, ())
+        ptr = ccall((:ZSTD_createDStream, libzstd), Ptr{Cvoid}, ())
         if ptr == C_NULL
             throw(OutOfMemoryError())
         end
@@ -92,17 +92,17 @@ mutable struct DStream
 end
 
 function initialize!(dstream::DStream)
-    return ccall((:ZSTD_initDStream, libzstd), Csize_t, (Ptr{Void},), dstream.ptr)
+    return ccall((:ZSTD_initDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
 end
 
 function reset!(dstream::DStream)
-    return ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{Void},), dstream.ptr)
+    return ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
 end
 
 function decompress!(dstream::DStream)
-    return ccall((:ZSTD_decompressStream, libzstd), Csize_t, (Ptr{Void}, Ptr{Void}, Ptr{Void}), dstream.ptr, pointer_from_objref(dstream.obuffer), pointer_from_objref(dstream.ibuffer))
+    return ccall((:ZSTD_decompressStream, libzstd), Csize_t, (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{Cvoid}), dstream.ptr, pointer_from_objref(dstream.obuffer), pointer_from_objref(dstream.ibuffer))
 end
 
 function free!(dstream::DStream)
-    return ccall((:ZSTD_freeDStream, libzstd), Csize_t, (Ptr{Void},), dstream.ptr)
+    return ccall((:ZSTD_freeDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
 end
