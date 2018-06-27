@@ -26,6 +26,10 @@ function splitkwargs(kwargs, keys)
     return hits, others
 end
 
+if VERSION < v"0.7-"
+    const Cvoid = Void
+end
+
 include("libzstd.jl")
 include("compression.jl")
 include("decompression.jl")
