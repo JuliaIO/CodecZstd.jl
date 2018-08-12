@@ -1,29 +1,17 @@
 using CodecZstd
-import TranscodingStreams
-if VERSION < v"0.7-"
-    using Base.Test
-else
-    using Test
-end
+using TranscodingStreams
+using Test
 
 @testset "Zstd Codec" begin
     codec = ZstdCompressor()
     @test codec isa ZstdCompressor
-    if VERSION < v"0.7-"
-        @test ismatch(r"^CodecZstd.ZstdCompressor\(level=\d+\)$", sprint(show, codec))
-    else
-        @test occursin(r"^ZstdCompressor\(level=\d+\)$", sprint(show, codec))
-    end
+    @test occursin(r"^ZstdCompressor\(level=\d+\)$", sprint(show, codec))
     @test CodecZstd.initialize(codec) === nothing
     @test CodecZstd.finalize(codec) === nothing
 
     codec = ZstdDecompressor()
     @test codec isa ZstdDecompressor
-    if VERSION < v"0.7-"
-        @test ismatch(r"^CodecZstd.ZstdDecompressor\(\)$", sprint(show, codec))
-    else
-        @test occursin(r"^ZstdDecompressor\(\)$", sprint(show, codec))
-    end
+    @test occursin(r"^ZstdDecompressor\(\)$", sprint(show, codec))
     @test CodecZstd.initialize(codec) === nothing
     @test CodecZstd.finalize(codec) === nothing
 
