@@ -1,5 +1,3 @@
-__precompile__()
-
 module CodecZstd
 
 export
@@ -14,30 +12,19 @@ import TranscodingStreams:
     Memory,
     Error,
     initialize,
-    finalize
+    finalize,
+    splitkwargs
 
-# TODO: This method will be added in the next version of TranscodingStreams.jl.
-function splitkwargs(kwargs, keys)
-    hits = []
-    others = []
-    for kwarg in kwargs
-        push!(kwarg[1] ∈ keys ? hits : others, kwarg)
-    end
-    return hits, others
+using Libdl
+const libzpath = joinpath(dirname(@__FILE__), "..", "deps", "deps.jl")
+if !isfile(libzpath)
+    error("CodecZlib.jl is not installed properly, run Pkg.build(\"CodecZlib\") and restart Julia.")
 end
-
-if VERSION < v"0.7-"
-    const Cvoid = Void
-end
+include(libzpath)
+check_deps()
 
 include("libzstd.jl")
 include("compression.jl")
 include("decompression.jl")
-
-# Deprecations
-@deprecate ZstdCompression         ZstdCompressor
-@deprecate ZstdCompressionStream   ZstdCompressorStream
-@deprecate ZstdDecompression       ZstdDecompressor
-@deprecate ZstdDecompressionStream ZstdDecompressorStream
 
 end # module
