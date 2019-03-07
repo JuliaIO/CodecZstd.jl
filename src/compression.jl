@@ -26,7 +26,9 @@ function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     if !(1 ≤ level ≤ MAX_CLEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
-    return ZstdCompressor(CStream(), level)
+    codec = ZstdCompressor(CStream(), level)
+    TranscodingStreams.initialize(codec)
+    return codec
 end
 
 const ZstdCompressorStream{S} = TranscodingStream{ZstdCompressor,S} where S<:IO
