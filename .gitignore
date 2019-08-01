@@ -1,3 +1,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+/Manifest.toml
+/deps/build.log
+/deps/deps.jl
+/deps/usr/
