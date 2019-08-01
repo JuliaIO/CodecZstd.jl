@@ -79,3 +79,17 @@ function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, outp
         return Δin, Δout, code == 0 ? :end : :ok
     end
 end
+
+function TranscodingStreams.expectedsize(codec::ZstdDecompressor, input::Memory)
+    ret = find_decompressed_size(input.ptr, input.size)
+    if ret == ZSTD_CONTENTSIZE_ERROR
+        # something is bad, but we ignore it here
+        return Int(input.size)
+    elseif ret == ZSTD_CONTENTSIZE_UNKNOWN
+        # random guess
+        return Int(input.size * 2)
+    else
+        # exact size
+        return Int(ret)
+    end
+end

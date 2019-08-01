@@ -103,3 +103,14 @@ end
 function free!(dstream::DStream)
     return ccall((:ZSTD_freeDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
 end
+
+
+# Misc. functions
+# ---------------
+
+const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
+const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
+
+function find_decompressed_size(src::Ptr, size::Integer)
+    return ccall((:ZSTD_findDecompressedSize, libzstd), Culonglong, (Ptr{Cvoid}, Csize_t), src, size)
+end
