@@ -2,7 +2,7 @@ name = "CodecZstd"
 uuid = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
 license = "MIT"
 authors = ["Kenta Sato <bicycle1885@gmail.com>"]
-version = "0.5.0"
+version = "0.6.0"
 
 [deps]
 BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
