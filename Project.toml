@@ -1,5 +1,5 @@
 name = "CodecZstd"
-uuid = "4459b14b-3668-429d-8468-65a36ae16185"
+uuid = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
 license = "MIT"
 authors = ["Kenta Sato <bicycle1885@gmail.com>"]
 version = "0.5.0"
