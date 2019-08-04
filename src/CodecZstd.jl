@@ -18,7 +18,7 @@ import TranscodingStreams:
 using Libdl
 const libzpath = joinpath(dirname(@__FILE__), "..", "deps", "deps.jl")
 if !isfile(libzpath)
-    error("CodecZlib.jl is not installed properly, run Pkg.build(\"CodecZlib\") and restart Julia.")
+    error("CodecZstd.jl is not installed properly, run Pkg.build(\"CodecZstd\") and restart Julia.")
 end
 include(libzpath)
 check_deps()
