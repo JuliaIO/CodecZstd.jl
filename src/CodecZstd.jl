@@ -15,13 +15,7 @@ import TranscodingStreams:
     finalize,
     splitkwargs
 
-using Libdl
-const libzpath = joinpath(dirname(@__FILE__), "..", "deps", "deps.jl")
-if !isfile(libzpath)
-    error("CodecZstd.jl is not installed properly, run Pkg.build(\"CodecZstd\") and restart Julia.")
-end
-include(libzpath)
-check_deps()
+using Zstd_jll
 
 include("libzstd.jl")
 include("compression.jl")
