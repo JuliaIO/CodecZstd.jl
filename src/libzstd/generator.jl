@@ -19,3 +19,4 @@ ctx = create_context(headers, args, options)
 
 # run generator
 build!(ctx)
+run(`git apply libzstd_clang_generated.patch`)

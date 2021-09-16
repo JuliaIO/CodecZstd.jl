@@ -1,0 +1,30 @@
+diff --git b/src/libzstd/LibZstd.jl a/src/libzstd/LibZstd.jl
+index f0a0e56..40d0489 100644
+--- b/src/libzstd/LibZstd.jl
++++ a/src/libzstd/LibZstd.jl
+@@ -234,7 +234,7 @@ function ZSTD_DCtx_reset(dctx, reset)
+     ccall((:ZSTD_DCtx_reset, libzstd), Csize_t, (Ptr{ZSTD_DCtx}, ZSTD_ResetDirective), dctx, reset)
+ end
+ 
+-struct ZSTD_inBuffer_s
++mutable struct ZSTD_inBuffer_s
+     src::Ptr{Cvoid}
+     size::Csize_t
+     pos::Csize_t
+@@ -242,7 +242,7 @@ end
+ 
+ const ZSTD_inBuffer = ZSTD_inBuffer_s
+ 
+-struct ZSTD_outBuffer_s
++mutable struct ZSTD_outBuffer_s
+     dst::Ptr{Cvoid}
+     size::Csize_t
+     pos::Csize_t
+@@ -1029,6 +1029,7 @@ const ZSTD_WINDOWLOG_MAX_32 = 30
+ const ZSTD_WINDOWLOG_MAX_64 = 31
+ 
+ # Skipping MacroDefinition: ZSTD_WINDOWLOG_MAX ( ( int ) ( sizeof ( size_t ) == 4 ? ZSTD_WINDOWLOG_MAX_32 : ZSTD_WINDOWLOG_MAX_64 ) )
++const ZSTD_WINDOWLOG_MAX = sizeof(Csize_t) == 4 ? ZSTD_WINDOWLOG_MAX_32 : ZSTD_WINDOWLOG_MAX_64
+ 
+ const ZSTD_WINDOWLOG_MIN = 10
+ 
