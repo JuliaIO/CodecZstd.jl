@@ -5,6 +5,7 @@ authors = ["Kenta Sato <bicycle1885@gmail.com>"]
 version = "0.7.0"
 
 [deps]
+CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 TranscodingStreams = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 Zstd_jll = "3161d3a3-bdf6-5164-811a-617609db77b4"
 
