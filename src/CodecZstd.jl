@@ -17,7 +17,7 @@ import TranscodingStreams:
 
 using Zstd_jll
 
-module Lib
+module LibZstd
     using CEnum
     import Zstd_jll: libzstd
 
