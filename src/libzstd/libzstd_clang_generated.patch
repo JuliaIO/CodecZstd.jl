@@ -1,0 +1,54 @@
+diff --git b/.gitignore a/.gitignore
+index 9b5b62d..2456797 100644
+--- b/.gitignore
++++ a/.gitignore
+@@ -5,5 +5,3 @@
+ /deps/build.log
+ /deps/deps.jl
+ /deps/usr/
+-src/libzstd/LibTemplate.jl
+-src/libzstd/ctypes.jl
+diff --git b/src/libzstd/libzstd_common.jl a/src/libzstd/libzstd_common.jl
+index 13ac46c..812b9c2 100644
+--- b/src/libzstd/libzstd_common.jl
++++ a/src/libzstd/libzstd_common.jl
+@@ -45,10 +45,12 @@ const ZSTD_WINDOWLOG_MAX_32 = 30
+ const ZSTD_WINDOWLOG_MAX_64 = 31
+ 
+ # Skipping MacroDefinition: ZSTD_WINDOWLOG_MAX ( ( int ) ( sizeof ( size_t ) == 4 ? ZSTD_WINDOWLOG_MAX_32 : ZSTD_WINDOWLOG_MAX_64 ) )
++const ZSTD_WINDOWLOG_MAX = sizeof(Csize_t) == 4 ? ZSTD_WINDOWLOG_MAX_32 : ZSTD_WINDOWLOG_MAX_64
+ 
+ const ZSTD_WINDOWLOG_MIN = 10
+ 
+ # Skipping MacroDefinition: ZSTD_HASHLOG_MAX ( ( ZSTD_WINDOWLOG_MAX < 30 ) ? ZSTD_WINDOWLOG_MAX : 30 )
++const ZSTD_HASHLOG_MAX = ZSTD_WINDOWLOG_MAX < 30 ? ZSTD_WINDOWLOG_MAX : 30
+ 
+ const ZSTD_HASHLOG_MIN = 6
+ const ZSTD_CHAINLOG_MAX_32 = 29
+@@ -180,8 +182,16 @@ end
+     ZSTD_reset_session_and_parameters = 3
+ end
+ 
++@cenum ZSTD_dParameter::UInt32 begin
++    ZSTD_d_windowLogMax = 100
++    ZSTD_d_experimentalParam1 = 1000
++    ZSTD_d_experimentalParam2 = 1001
++    ZSTD_d_experimentalParam3 = 1002
++    ZSTD_d_experimentalParam4 = 1003
++end
++
+ 
+-struct ZSTD_inBuffer_s
++mutable struct ZSTD_inBuffer_s
+     src::Ptr{Cvoid}
+     size::Csize_t
+     pos::Csize_t
+@@ -189,7 +199,7 @@ end
+ 
+ const ZSTD_inBuffer = ZSTD_inBuffer_s
+ 
+-struct ZSTD_outBuffer_s
++mutable struct ZSTD_outBuffer_s
+     dst::Ptr{Cvoid}
+     size::Csize_t
+     pos::Csize_t
