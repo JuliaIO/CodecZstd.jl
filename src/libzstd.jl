@@ -68,14 +68,19 @@ end
 function reset!(cstream::CStream, srcsize::Integer)
     # ZSTD_resetCStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2253-L2272
-    #=
     res = Lib.ZSTD_CCtx_reset(cstream.ptr, Lib.ZSTD_reset_session_only)
     if iserror(res)
         return res
     end
+    if srcsize == 0
+        # From zstd.h:
+        # Note: ZSTD_resetCStream() interprets pledgedSrcSize == 0 as ZSTD_CONTENTSIZE_UNKNOWN, but
+        # ZSTD_CCtx_setPledgedSrcSize() does not do the same, so ZSTD_CONTENTSIZE_UNKNOWN must be
+        # explicitly specified.
+        srcsize = ZSTD_CONTENTSIZE_UNKNOWN
+    end
     return Lib.ZSTD_CCtx_setPledgedSrcSize(cstream.ptr, srcsize)
-    =#
-    return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
+    #return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
 
 end
 
@@ -113,8 +118,8 @@ end
 function reset!(dstream::DStream)
     # Lib.ZSTD_resetDStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2332-L2339
-    #return Lib.ZSTD_DCtx_reset(dstream.ptr, Lib.ZSTD_reset_session_only)
-    return ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
+    return Lib.ZSTD_DCtx_reset(dstream.ptr, Lib.ZSTD_reset_session_only)
+    #return ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
 end
 
 function decompress!(dstream::DStream)
@@ -133,6 +138,6 @@ const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
 
 function find_decompressed_size(src::Ptr, size::Integer)
-    #return Lib.ZSTD_findDecompressedSize(src, size)
-    return ccall((:ZSTD_findDecompressedSize, libzstd), Culonglong, (Ptr{Cvoid}, Csize_t), src, size)
+    return Lib.ZSTD_findDecompressedSize(src, size)
+    #return ccall((:ZSTD_findDecompressedSize, libzstd), Culonglong, (Ptr{Cvoid}, Csize_t), src, size)
 end
