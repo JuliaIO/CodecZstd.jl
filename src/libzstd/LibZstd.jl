@@ -19,8 +19,6 @@ function ZSTD_EXPAND_AND_QUOTE(expr)
     join(string.(v),".")
 end
 
-
-
 function ZDICT_trainFromBuffer(dictBuffer, dictBufferCapacity, samplesBuffer, samplesSizes, nbSamples)
     ccall((:ZDICT_trainFromBuffer, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t, Ptr{Cvoid}, Ptr{Csize_t}, Cuint), dictBuffer, dictBufferCapacity, samplesBuffer, samplesSizes, nbSamples)
 end
