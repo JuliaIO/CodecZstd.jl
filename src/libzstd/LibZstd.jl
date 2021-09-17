@@ -5,19 +5,9 @@ export Zstd_jll
 
 using CEnum
 
-const ZDICTLIB_VISIBILITY = nothing
-const ZSTDLIB_VISIBILITY = nothing
-const ZSTDERRORLIB_VISIBILITY = nothing
 const INT_MAX = typemax(Cint)
 
-ZSTD_LIB_VERSION = quote
-    ZSTD_VERSION_MAJOR, ZSTD_VERSION_MINOR, ZSTD_VERSION_RELEASE
-end
-
-function ZSTD_EXPAND_AND_QUOTE(expr)
-    v = eval(expr)
-    join(string.(v),".")
-end
+ZSTD_EXPAND_AND_QUOTE(expr) = string(expr)
 
 function ZDICT_trainFromBuffer(dictBuffer, dictBufferCapacity, samplesBuffer, samplesSizes, nbSamples)
     ccall((:ZDICT_trainFromBuffer, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t, Ptr{Cvoid}, Ptr{Csize_t}, Cuint), dictBuffer, dictBufferCapacity, samplesBuffer, samplesSizes, nbSamples)
@@ -982,11 +972,11 @@ function ZSTD_getErrorString(code)
     ccall((:ZSTD_getErrorString, libzstd), Ptr{Cchar}, (ZSTD_ErrorCode,), code)
 end
 
-# Skipping MacroDefinition: ZDICTLIB_VISIBILITY __attribute__ ( ( visibility ( "default" ) ) )
+const ZDICTLIB_VISIBILITY = nothing
 
 const ZDICTLIB_API = ZDICTLIB_VISIBILITY
 
-# Skipping MacroDefinition: ZSTDLIB_VISIBILITY __attribute__ ( ( visibility ( "default" ) ) )
+const ZSTDLIB_VISIBILITY = nothing
 
 const ZSTDLIB_API = ZSTDLIB_VISIBILITY
 
@@ -998,7 +988,7 @@ const ZSTD_VERSION_RELEASE = 0
 
 const ZSTD_VERSION_NUMBER = ZSTD_VERSION_MAJOR * 100 * 100 + ZSTD_VERSION_MINOR * 100 + ZSTD_VERSION_RELEASE
 
-# Skipping MacroDefinition: ZSTD_LIB_VERSION ZSTD_VERSION_MAJOR . ZSTD_VERSION_MINOR . ZSTD_VERSION_RELEASE
+const ZSTD_LIB_VERSION = VersionNumber(ZSTD_VERSION_MAJOR, ZSTD_VERSION_MINOR, ZSTD_VERSION_RELEASE)
 
 const ZSTD_VERSION_STRING = ZSTD_EXPAND_AND_QUOTE(ZSTD_LIB_VERSION)
 
@@ -1028,8 +1018,11 @@ const ZSTD_WINDOWLOG_MAX_32 = 30
 
 const ZSTD_WINDOWLOG_MAX_64 = 31
 
-# Skipping MacroDefinition: ZSTD_WINDOWLOG_MAX ( ( int ) ( sizeof ( size_t ) == 4 ? ZSTD_WINDOWLOG_MAX_32 : ZSTD_WINDOWLOG_MAX_64 ) )
-const ZSTD_WINDOWLOG_MAX = sizeof(Csize_t) == 4 ? ZSTD_WINDOWLOG_MAX_32 : ZSTD_WINDOWLOG_MAX_64
+const ZSTD_WINDOWLOG_MAX = if sizeof(Csize_t) == 4
+            ZSTD_WINDOWLOG_MAX_32
+        else
+            ZSTD_WINDOWLOG_MAX_64
+        end
 
 const ZSTD_WINDOWLOG_MIN = 10
 
@@ -1045,7 +1038,11 @@ const ZSTD_CHAINLOG_MAX_32 = 29
 
 const ZSTD_CHAINLOG_MAX_64 = 30
 
-# Skipping MacroDefinition: ZSTD_CHAINLOG_MAX ( ( int ) ( sizeof ( size_t ) == 4 ? ZSTD_CHAINLOG_MAX_32 : ZSTD_CHAINLOG_MAX_64 ) )
+const ZSTD_CHAINLOG_MAX = if sizeof(Csize_t) == 4
+            ZSTD_CHAINLOG_MAX_32
+        else
+            ZSTD_CHAINLOG_MAX_64
+        end
 
 const ZSTD_CHAINLOG_MIN = ZSTD_HASHLOG_MIN
 
@@ -1135,7 +1132,7 @@ const ZSTD_d_forceIgnoreChecksum = ZSTD_d_experimentalParam3
 
 const ZSTD_d_refMultipleDDicts = ZSTD_d_experimentalParam4
 
-# Skipping MacroDefinition: ZSTDERRORLIB_VISIBILITY __attribute__ ( ( visibility ( "default" ) ) )
+const ZSTDERRORLIB_VISIBILITY = nothing
 
 const ZSTDERRORLIB_API = ZSTDERRORLIB_VISIBILITY
 
