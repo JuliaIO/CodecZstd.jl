@@ -18,12 +18,14 @@ const MAX_CLEVEL = max_clevel()
 
 const InBuffer = LibZstd.ZSTD_inBuffer
 InBuffer() = InBuffer(C_NULL, 0, 0)
+Base.unsafe_convert(::Type{Ptr{InBuffer}}, buffer::InBuffer) = Ptr{InBuffer}(pointer_from_objref(buffer))
 const OutBuffer = LibZstd.ZSTD_outBuffer
 OutBuffer() = OutBuffer(C_NULL, 0, 0)
+Base.unsafe_convert(::Type{Ptr{OutBuffer}}, buffer::OutBuffer) = Ptr{OutBuffer}(pointer_from_objref(buffer))
 
 # ZSTD_CStream
 mutable struct CStream
-    ptr::Ptr{Cvoid}
+    ptr::Ptr{LibZstd.ZSTD_CStream}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
@@ -36,14 +38,18 @@ mutable struct CStream
     end
 end
 
+Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_CStream}}, cstream::CStream) = cstream.ptr
+Base.unsafe_convert(::Type{Ptr{InBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{InBuffer}, cstream.ibuffer)
+Base.unsafe_convert(::Type{Ptr{OutBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{OutBuffer}, cstream.obuffer)
+
 function initialize!(cstream::CStream, level::Integer)
-    return LibZstd.ZSTD_initCStream(cstream.ptr, level)
+    return LibZstd.ZSTD_initCStream(cstream, level)
 end
 
 function reset!(cstream::CStream, srcsize::Integer)
     # ZSTD_resetCStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2253-L2272
-    res = LibZstd.ZSTD_CCtx_reset(cstream.ptr, LibZstd.ZSTD_reset_session_only)
+    res = LibZstd.ZSTD_CCtx_reset(cstream, LibZstd.ZSTD_reset_session_only)
     if iserror(res)
         return res
     end
@@ -54,26 +60,26 @@ function reset!(cstream::CStream, srcsize::Integer)
         # explicitly specified.
         srcsize = ZSTD_CONTENTSIZE_UNKNOWN
     end
-    return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream.ptr, srcsize)
+    return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream, srcsize)
     #return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
 
 end
 
 function compress!(cstream::CStream)
-    return LibZstd.ZSTD_compressStream(cstream.ptr, pointer_from_objref(cstream.obuffer), pointer_from_objref(cstream.ibuffer))
+    return LibZstd.ZSTD_compressStream(cstream, cstream, cstream)
 end
 
 function finish!(cstream::CStream)
-    return LibZstd.ZSTD_endStream(cstream.ptr, pointer_from_objref(cstream.obuffer))
+    return LibZstd.ZSTD_endStream(cstream, cstream)
 end
 
 function free!(cstream::CStream)
-    return LibZstd.ZSTD_freeCStream(cstream.ptr)
+    return LibZstd.ZSTD_freeCStream(cstream)
 end
 
 # ZSTD_DStream
 mutable struct DStream
-    ptr::Ptr{Cvoid}
+    ptr::Ptr{LibZstd.ZSTD_DStream}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
@@ -85,23 +91,26 @@ mutable struct DStream
         return new(ptr, InBuffer(), OutBuffer())
     end
 end
+Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DStream}}, dstream::DStream) = dstream.ptr
+Base.unsafe_convert(::Type{Ptr{InBuffer}}, dstream::DStream) = Ptr{InBuffer}(Base.unsafe_convert(Ptr{InBuffer}, dstream.ibuffer))
+Base.unsafe_convert(::Type{Ptr{OutBuffer}}, dstream::DStream) = Ptr{OutBuffer}(Base.unsafe_convert(Ptr{OutBuffer}, dstream.obuffer))
 
 function initialize!(dstream::DStream)
-    return LibZstd.ZSTD_initDStream(dstream.ptr)
+    return LibZstd.ZSTD_initDStream(dstream)
 end
 
 function reset!(dstream::DStream)
     # LibZstd.ZSTD_resetDStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2332-L2339
-    return LibZstd.ZSTD_DCtx_reset(dstream.ptr, LibZstd.ZSTD_reset_session_only)
+    return LibZstd.ZSTD_DCtx_reset(dstream, LibZstd.ZSTD_reset_session_only)
 end
 
 function decompress!(dstream::DStream)
-    return LibZstd.ZSTD_decompressStream(dstream.ptr, pointer_from_objref(dstream.obuffer), pointer_from_objref(dstream.ibuffer))
+    return LibZstd.ZSTD_decompressStream(dstream, dstream, dstream)
 end
 
 function free!(dstream::DStream)
-    return LibZstd.ZSTD_freeDStream(dstream.ptr)
+    return LibZstd.ZSTD_freeDStream(dstream)
 end
 
 
