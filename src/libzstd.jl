@@ -66,11 +66,11 @@ function reset!(cstream::CStream, srcsize::Integer)
 end
 
 function compress!(cstream::CStream)
-    return LibZstd.ZSTD_compressStream(cstream, cstream, cstream)
+    return LibZstd.ZSTD_compressStream(cstream, cstream.obuffer, cstream.ibuffer)
 end
 
 function finish!(cstream::CStream)
-    return LibZstd.ZSTD_endStream(cstream, cstream)
+    return LibZstd.ZSTD_endStream(cstream, cstream.obuffer)
 end
 
 function free!(cstream::CStream)
@@ -106,7 +106,7 @@ function reset!(dstream::DStream)
 end
 
 function decompress!(dstream::DStream)
-    return LibZstd.ZSTD_decompressStream(dstream, dstream, dstream)
+    return LibZstd.ZSTD_decompressStream(dstream, dstream.obuffer, dstream.ibuffer)
 end
 
 function free!(dstream::DStream)
