@@ -17,6 +17,7 @@ import TranscodingStreams:
 
 using Zstd_jll
 
+include(joinpath("libzstd","LibZstd.jl"))
 include("libzstd.jl")
 include("compression.jl")
 include("decompression.jl")

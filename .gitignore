@@ -5,3 +5,5 @@
 /deps/build.log
 /deps/deps.jl
 /deps/usr/
+src/libzstd/LibTemplate.jl
+src/libzstd/ctypes.jl

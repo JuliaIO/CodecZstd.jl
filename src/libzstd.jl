@@ -2,41 +2,24 @@
 # ====================
 
 function iserror(code::Csize_t)
-    return ccall((:ZSTD_isError, libzstd), Cuint, (Csize_t,), code) != 0
+    return LibZstd.ZSTD_isError(code) != 0
 end
 
 function zstderror(stream, code::Csize_t)
-    ptr = ccall((:ZSTD_getErrorName, libzstd), Cstring, (Csize_t,), code)
+    ptr = LibZstd.ZSTD_getErrorName(code)
     error("zstd error: ", unsafe_string(ptr))
 end
 
 function max_clevel()
-    return ccall((:ZSTD_maxCLevel, libzstd), Cint, ())
+    return LibZstd.ZSTD_maxCLevel()
 end
 
 const MAX_CLEVEL = max_clevel()
 
-# ZSTD_outBuffer
-mutable struct InBuffer
-    src::Ptr{Cvoid}
-    size::Csize_t
-    pos::Csize_t
-
-    function InBuffer()
-        return new(C_NULL, 0, 0)
-    end
-end
-
-# ZSTD_inBuffer
-mutable struct OutBuffer
-    dst::Ptr{Cvoid}
-    size::Csize_t
-    pos::Csize_t
-
-    function OutBuffer()
-        return new(C_NULL, 0, 0)
-    end
-end
+const InBuffer = LibZstd.ZSTD_inBuffer
+InBuffer() = InBuffer(C_NULL, 0, 0)
+const OutBuffer = LibZstd.ZSTD_outBuffer
+OutBuffer() = OutBuffer(C_NULL, 0, 0)
 
 # ZSTD_CStream
 mutable struct CStream
@@ -45,7 +28,7 @@ mutable struct CStream
     obuffer::OutBuffer
 
     function CStream()
-        ptr = ccall((:ZSTD_createCStream, libzstd), Ptr{Cvoid}, ())
+        ptr = LibZstd.ZSTD_createCStream()
         if ptr == C_NULL
             throw(OutOfMemoryError())
         end
@@ -54,23 +37,38 @@ mutable struct CStream
 end
 
 function initialize!(cstream::CStream, level::Integer)
-    return ccall((:ZSTD_initCStream, libzstd), Csize_t, (Ptr{Cvoid}, Cint), cstream.ptr, level)
+    return LibZstd.ZSTD_initCStream(cstream.ptr, level)
 end
 
 function reset!(cstream::CStream, srcsize::Integer)
-    return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
+    # ZSTD_resetCStream is deprecated
+    # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2253-L2272
+    res = LibZstd.ZSTD_CCtx_reset(cstream.ptr, LibZstd.ZSTD_reset_session_only)
+    if iserror(res)
+        return res
+    end
+    if srcsize == 0
+        # From zstd.h:
+        # Note: ZSTD_resetCStream() interprets pledgedSrcSize == 0 as ZSTD_CONTENTSIZE_UNKNOWN, but
+        # ZSTD_CCtx_setPledgedSrcSize() does not do the same, so ZSTD_CONTENTSIZE_UNKNOWN must be
+        # explicitly specified.
+        srcsize = ZSTD_CONTENTSIZE_UNKNOWN
+    end
+    return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream.ptr, srcsize)
+    #return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
+
 end
 
 function compress!(cstream::CStream)
-    return ccall((:ZSTD_compressStream, libzstd), Csize_t, (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{Cvoid}), cstream.ptr, pointer_from_objref(cstream.obuffer), pointer_from_objref(cstream.ibuffer))
+    return LibZstd.ZSTD_compressStream(cstream.ptr, pointer_from_objref(cstream.obuffer), pointer_from_objref(cstream.ibuffer))
 end
 
 function finish!(cstream::CStream)
-    return ccall((:ZSTD_endStream, libzstd), Csize_t, (Ptr{Cvoid}, Ptr{Cvoid}), cstream.ptr, pointer_from_objref(cstream.obuffer))
+    return LibZstd.ZSTD_endStream(cstream.ptr, pointer_from_objref(cstream.obuffer))
 end
 
 function free!(cstream::CStream)
-    return ccall((:ZSTD_freeCStream, libzstd), Csize_t, (Ptr{Cvoid},), cstream.ptr)
+    return LibZstd.ZSTD_freeCStream(cstream.ptr)
 end
 
 # ZSTD_DStream
@@ -80,7 +78,7 @@ mutable struct DStream
     obuffer::OutBuffer
 
     function DStream()
-        ptr = ccall((:ZSTD_createDStream, libzstd), Ptr{Cvoid}, ())
+        ptr = LibZstd.ZSTD_createDStream()
         if ptr == C_NULL
             throw(OutOfMemoryError())
         end
@@ -89,19 +87,21 @@ mutable struct DStream
 end
 
 function initialize!(dstream::DStream)
-    return ccall((:ZSTD_initDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
+    return LibZstd.ZSTD_initDStream(dstream.ptr)
 end
 
 function reset!(dstream::DStream)
-    return ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
+    # LibZstd.ZSTD_resetDStream is deprecated
+    # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2332-L2339
+    return LibZstd.ZSTD_DCtx_reset(dstream.ptr, LibZstd.ZSTD_reset_session_only)
 end
 
 function decompress!(dstream::DStream)
-    return ccall((:ZSTD_decompressStream, libzstd), Csize_t, (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{Cvoid}), dstream.ptr, pointer_from_objref(dstream.obuffer), pointer_from_objref(dstream.ibuffer))
+    return LibZstd.ZSTD_decompressStream(dstream.ptr, pointer_from_objref(dstream.obuffer), pointer_from_objref(dstream.ibuffer))
 end
 
 function free!(dstream::DStream)
-    return ccall((:ZSTD_freeDStream, libzstd), Csize_t, (Ptr{Cvoid},), dstream.ptr)
+    return LibZstd.ZSTD_freeDStream(dstream.ptr)
 end
 
 
@@ -112,5 +112,5 @@ const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
 
 function find_decompressed_size(src::Ptr, size::Integer)
-    return ccall((:ZSTD_findDecompressedSize, libzstd), Culonglong, (Ptr{Cvoid}, Csize_t), src, size)
+    return LibZstd.ZSTD_findDecompressedSize(src, size)
 end
