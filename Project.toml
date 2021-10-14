@@ -3,7 +3,7 @@ uuid = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
 license = "MIT"
 authors = ["Kenta Sato <bicycle1885@gmail.com>",
            "JuliaIO Github Organization"]
-version = "0.7.1"
+version = "0.7.2"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
