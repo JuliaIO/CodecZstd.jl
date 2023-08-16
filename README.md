@@ -1,8 +1,6 @@
 CodecZstd.jl
 ============
 
-[![TravisCI Status][travisci-img]][travisci-url]
-[![AppVeyor Status][appveyor-img]][appveyor-url]
 [![codecov.io][codecov-img]][codecov-url]
 
 ## Installation
