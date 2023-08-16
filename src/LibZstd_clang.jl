@@ -3,11 +3,11 @@ module LibZstd
 using Zstd_jll
 export Zstd_jll
 
-using CEnum
-
 const INT_MAX = typemax(Cint)
+const size_t = Int64
 
 ZSTD_EXPAND_AND_QUOTE(expr) = string(expr)
+
 
 function ZDICT_trainFromBuffer(dictBuffer, dictBufferCapacity, samplesBuffer, samplesSizes, nbSamples)
     ccall((:ZDICT_trainFromBuffer, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t, Ptr{Cvoid}, Ptr{Csize_t}, Cuint), dictBuffer, dictBufferCapacity, samplesBuffer, samplesSizes, nbSamples)
@@ -123,7 +123,7 @@ function ZSTD_decompressDCtx(dctx, dst, dstCapacity, src, srcSize)
     ccall((:ZSTD_decompressDCtx, libzstd), Csize_t, (Ptr{ZSTD_DCtx}, Ptr{Cvoid}, Csize_t, Ptr{Cvoid}, Csize_t), dctx, dst, dstCapacity, src, srcSize)
 end
 
-@cenum ZSTD_strategy::UInt32 begin
+@enum ZSTD_strategy::UInt32 begin
     ZSTD_fast = 1
     ZSTD_dfast = 2
     ZSTD_greedy = 3
@@ -135,7 +135,7 @@ end
     ZSTD_btultra2 = 9
 end
 
-@cenum ZSTD_cParameter::UInt32 begin
+@enum ZSTD_cParameter::UInt32 begin
     ZSTD_c_compressionLevel = 100
     ZSTD_c_windowLog = 101
     ZSTD_c_hashLog = 102
@@ -170,6 +170,10 @@ end
     ZSTD_c_experimentalParam13 = 1010
     ZSTD_c_experimentalParam14 = 1011
     ZSTD_c_experimentalParam15 = 1012
+    ZSTD_c_experimentalParam16 = 1013
+    ZSTD_c_experimentalParam17 = 1014
+    ZSTD_c_experimentalParam18 = 1015
+    ZSTD_c_experimentalParam19 = 1016
 end
 
 struct ZSTD_bounds
@@ -190,7 +194,7 @@ function ZSTD_CCtx_setPledgedSrcSize(cctx, pledgedSrcSize)
     ccall((:ZSTD_CCtx_setPledgedSrcSize, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, Culonglong), cctx, pledgedSrcSize)
 end
 
-@cenum ZSTD_ResetDirective::UInt32 begin
+@enum ZSTD_ResetDirective::UInt32 begin
     ZSTD_reset_session_only = 1
     ZSTD_reset_parameters = 2
     ZSTD_reset_session_and_parameters = 3
@@ -204,12 +208,13 @@ function ZSTD_compress2(cctx, dst, dstCapacity, src, srcSize)
     ccall((:ZSTD_compress2, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, Ptr{Cvoid}, Csize_t, Ptr{Cvoid}, Csize_t), cctx, dst, dstCapacity, src, srcSize)
 end
 
-@cenum ZSTD_dParameter::UInt32 begin
+@enum ZSTD_dParameter::UInt32 begin
     ZSTD_d_windowLogMax = 100
     ZSTD_d_experimentalParam1 = 1000
     ZSTD_d_experimentalParam2 = 1001
     ZSTD_d_experimentalParam3 = 1002
     ZSTD_d_experimentalParam4 = 1003
+    ZSTD_d_experimentalParam5 = 1004
 end
 
 function ZSTD_dParam_getBounds(dParam)
@@ -250,7 +255,7 @@ function ZSTD_freeCStream(zcs)
     ccall((:ZSTD_freeCStream, libzstd), Csize_t, (Ptr{ZSTD_CStream},), zcs)
 end
 
-@cenum ZSTD_EndDirective::UInt32 begin
+@enum ZSTD_EndDirective::UInt32 begin
     ZSTD_e_continue = 0
     ZSTD_e_flush = 1
     ZSTD_e_end = 2
@@ -446,49 +451,49 @@ struct ZSTD_parameters
     fParams::ZSTD_frameParameters
 end
 
-@cenum ZSTD_dictContentType_e::UInt32 begin
+@enum ZSTD_dictContentType_e::UInt32 begin
     ZSTD_dct_auto = 0
     ZSTD_dct_rawContent = 1
     ZSTD_dct_fullDict = 2
 end
 
-@cenum ZSTD_dictLoadMethod_e::UInt32 begin
+@enum ZSTD_dictLoadMethod_e::UInt32 begin
     ZSTD_dlm_byCopy = 0
     ZSTD_dlm_byRef = 1
 end
 
-@cenum ZSTD_format_e::UInt32 begin
+@enum ZSTD_format_e::UInt32 begin
     ZSTD_f_zstd1 = 0
     ZSTD_f_zstd1_magicless = 1
 end
 
-@cenum ZSTD_forceIgnoreChecksum_e::UInt32 begin
+@enum ZSTD_forceIgnoreChecksum_e::UInt32 begin
     ZSTD_d_validateChecksum = 0
     ZSTD_d_ignoreChecksum = 1
 end
 
-@cenum ZSTD_refMultipleDDicts_e::UInt32 begin
+@enum ZSTD_refMultipleDDicts_e::UInt32 begin
     ZSTD_rmd_refSingleDDict = 0
     ZSTD_rmd_refMultipleDDicts = 1
 end
 
-@cenum ZSTD_dictAttachPref_e::UInt32 begin
+@enum ZSTD_dictAttachPref_e::UInt32 begin
     ZSTD_dictDefaultAttach = 0
     ZSTD_dictForceAttach = 1
     ZSTD_dictForceCopy = 2
     ZSTD_dictForceLoad = 3
 end
 
-@cenum ZSTD_literalCompressionMode_e::UInt32 begin
+@enum ZSTD_literalCompressionMode_e::UInt32 begin
     ZSTD_lcm_auto = 0
     ZSTD_lcm_huffman = 1
     ZSTD_lcm_uncompressed = 2
 end
 
-@cenum ZSTD_useRowMatchFinderMode_e::UInt32 begin
-    ZSTD_urm_auto = 0
-    ZSTD_urm_disableRowMatchFinder = 1
-    ZSTD_urm_enableRowMatchFinder = 2
+@enum ZSTD_paramSwitch_e::UInt32 begin
+    ZSTD_ps_auto = 0
+    ZSTD_ps_enable = 1
+    ZSTD_ps_disable = 2
 end
 
 function ZSTD_findDecompressedSize(src, srcSize)
@@ -503,9 +508,42 @@ function ZSTD_frameHeaderSize(src, srcSize)
     ccall((:ZSTD_frameHeaderSize, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t), src, srcSize)
 end
 
-@cenum ZSTD_sequenceFormat_e::UInt32 begin
+@enum ZSTD_frameType_e::UInt32 begin
+    ZSTD_frame = 0
+    ZSTD_skippableFrame = 1
+end
+
+struct ZSTD_frameHeader
+    frameContentSize::Culonglong
+    windowSize::Culonglong
+    blockSizeMax::Cuint
+    frameType::ZSTD_frameType_e
+    headerSize::Cuint
+    dictID::Cuint
+    checksumFlag::Cuint
+    _reserved1::Cuint
+    _reserved2::Cuint
+end
+
+function ZSTD_getFrameHeader(zfhPtr, src, srcSize)
+    ccall((:ZSTD_getFrameHeader, libzstd), Csize_t, (Ptr{ZSTD_frameHeader}, Ptr{Cvoid}, Csize_t), zfhPtr, src, srcSize)
+end
+
+function ZSTD_getFrameHeader_advanced(zfhPtr, src, srcSize, format)
+    ccall((:ZSTD_getFrameHeader_advanced, libzstd), Csize_t, (Ptr{ZSTD_frameHeader}, Ptr{Cvoid}, Csize_t, ZSTD_format_e), zfhPtr, src, srcSize, format)
+end
+
+function ZSTD_decompressionMargin(src, srcSize)
+    ccall((:ZSTD_decompressionMargin, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t), src, srcSize)
+end
+
+@enum ZSTD_sequenceFormat_e::UInt32 begin
     ZSTD_sf_noBlockDelimiters = 0
     ZSTD_sf_explicitBlockDelimiters = 1
+end
+
+function ZSTD_sequenceBound(srcSize)
+    ccall((:ZSTD_sequenceBound, libzstd), Csize_t, (Csize_t,), srcSize)
 end
 
 function ZSTD_generateSequences(zc, outSeqs, outSeqsSize, src, srcSize)
@@ -522,6 +560,14 @@ end
 
 function ZSTD_writeSkippableFrame(dst, dstCapacity, src, srcSize, magicVariant)
     ccall((:ZSTD_writeSkippableFrame, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t, Ptr{Cvoid}, Csize_t, Cuint), dst, dstCapacity, src, srcSize, magicVariant)
+end
+
+function ZSTD_readSkippableFrame(dst, dstCapacity, magicVariant, src, srcSize)
+    ccall((:ZSTD_readSkippableFrame, libzstd), Csize_t, (Ptr{Cvoid}, Csize_t, Ptr{Cuint}, Ptr{Cvoid}, Csize_t), dst, dstCapacity, magicVariant, src, srcSize)
+end
+
+function ZSTD_isSkippableFrame(buffer, size)
+    ccall((:ZSTD_isSkippableFrame, libzstd), Cuint, (Ptr{Cvoid}, Csize_t), buffer, size)
 end
 
 function ZSTD_estimateCCtxSize(compressionLevel)
@@ -670,6 +716,18 @@ end
 
 function ZSTD_adjustCParams(cPar, srcSize, dictSize)
     ccall((:ZSTD_adjustCParams, libzstd), ZSTD_compressionParameters, (ZSTD_compressionParameters, Culonglong, Csize_t), cPar, srcSize, dictSize)
+end
+
+function ZSTD_CCtx_setCParams(cctx, cparams)
+    ccall((:ZSTD_CCtx_setCParams, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, ZSTD_compressionParameters), cctx, cparams)
+end
+
+function ZSTD_CCtx_setFParams(cctx, fparams)
+    ccall((:ZSTD_CCtx_setFParams, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, ZSTD_frameParameters), cctx, fparams)
+end
+
+function ZSTD_CCtx_setParams(cctx, params)
+    ccall((:ZSTD_CCtx_setParams, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, ZSTD_parameters), cctx, params)
 end
 
 function ZSTD_compress_advanced(cctx, dst, dstCapacity, src, srcSize, dict, dictSize, params)
@@ -821,6 +879,13 @@ function ZSTD_resetDStream(zds)
     ccall((:ZSTD_resetDStream, libzstd), Csize_t, (Ptr{ZSTD_DStream},), zds)
 end
 
+# typedef size_t ZSTD_sequenceProducer_F ( void * sequenceProducerState , ZSTD_Sequence * outSeqs , size_t outSeqsCapacity , const void * src , size_t srcSize , const void * dict , size_t dictSize , int compressionLevel , size_t windowSize )
+const ZSTD_sequenceProducer_F = Cvoid
+
+function ZSTD_registerSequenceProducer(cctx, sequenceProducerState, sequenceProducer)
+    ccall((:ZSTD_registerSequenceProducer, libzstd), Cvoid, (Ptr{ZSTD_CCtx}, Ptr{Cvoid}, Ptr{ZSTD_sequenceProducer_F}), cctx, sequenceProducerState, sequenceProducer)
+end
+
 function ZSTD_compressBegin(cctx, compressionLevel)
     ccall((:ZSTD_compressBegin, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, Cint), cctx, compressionLevel)
 end
@@ -853,29 +918,6 @@ function ZSTD_compressBegin_usingCDict_advanced(cctx, cdict, fParams, pledgedSrc
     ccall((:ZSTD_compressBegin_usingCDict_advanced, libzstd), Csize_t, (Ptr{ZSTD_CCtx}, Ptr{ZSTD_CDict}, ZSTD_frameParameters, Culonglong), cctx, cdict, fParams, pledgedSrcSize)
 end
 
-@cenum ZSTD_frameType_e::UInt32 begin
-    ZSTD_frame = 0
-    ZSTD_skippableFrame = 1
-end
-
-struct ZSTD_frameHeader
-    frameContentSize::Culonglong
-    windowSize::Culonglong
-    blockSizeMax::Cuint
-    frameType::ZSTD_frameType_e
-    headerSize::Cuint
-    dictID::Cuint
-    checksumFlag::Cuint
-end
-
-function ZSTD_getFrameHeader(zfhPtr, src, srcSize)
-    ccall((:ZSTD_getFrameHeader, libzstd), Csize_t, (Ptr{ZSTD_frameHeader}, Ptr{Cvoid}, Csize_t), zfhPtr, src, srcSize)
-end
-
-function ZSTD_getFrameHeader_advanced(zfhPtr, src, srcSize, format)
-    ccall((:ZSTD_getFrameHeader_advanced, libzstd), Csize_t, (Ptr{ZSTD_frameHeader}, Ptr{Cvoid}, Csize_t, ZSTD_format_e), zfhPtr, src, srcSize, format)
-end
-
 function ZSTD_decodingBufferSize_min(windowSize, frameContentSize)
     ccall((:ZSTD_decodingBufferSize_min, libzstd), Csize_t, (Culonglong, Culonglong), windowSize, frameContentSize)
 end
@@ -904,7 +946,7 @@ function ZSTD_copyDCtx(dctx, preparedDCtx)
     ccall((:ZSTD_copyDCtx, libzstd), Cvoid, (Ptr{ZSTD_DCtx}, Ptr{ZSTD_DCtx}), dctx, preparedDCtx)
 end
 
-@cenum ZSTD_nextInputType_e::UInt32 begin
+@enum ZSTD_nextInputType_e::UInt32 begin
     ZSTDnit_frameHeader = 0
     ZSTDnit_blockHeader = 1
     ZSTDnit_block = 2
@@ -933,7 +975,7 @@ function ZSTD_insertBlock(dctx, blockStart, blockSize)
     ccall((:ZSTD_insertBlock, libzstd), Csize_t, (Ptr{ZSTD_DCtx}, Ptr{Cvoid}, Csize_t), dctx, blockStart, blockSize)
 end
 
-@cenum ZSTD_ErrorCode::UInt32 begin
+@enum ZSTD_ErrorCode::UInt32 begin
     ZSTD_error_no_error = 0
     ZSTD_error_GENERIC = 1
     ZSTD_error_prefix_unknown = 10
@@ -942,14 +984,17 @@ end
     ZSTD_error_frameParameter_windowTooLarge = 16
     ZSTD_error_corruption_detected = 20
     ZSTD_error_checksum_wrong = 22
+    ZSTD_error_literals_headerWrong = 24
     ZSTD_error_dictionary_corrupted = 30
     ZSTD_error_dictionary_wrong = 32
     ZSTD_error_dictionaryCreation_failed = 34
     ZSTD_error_parameter_unsupported = 40
+    ZSTD_error_parameter_combination_unsupported = 41
     ZSTD_error_parameter_outOfBound = 42
     ZSTD_error_tableLog_tooLarge = 44
     ZSTD_error_maxSymbolValue_tooLarge = 46
     ZSTD_error_maxSymbolValue_tooSmall = 48
+    ZSTD_error_stabilityCondition_notRespected = 50
     ZSTD_error_stage_wrong = 60
     ZSTD_error_init_missing = 62
     ZSTD_error_memory_allocation = 64
@@ -957,10 +1002,14 @@ end
     ZSTD_error_dstSize_tooSmall = 70
     ZSTD_error_srcSize_wrong = 72
     ZSTD_error_dstBuffer_null = 74
+    ZSTD_error_noForwardProgress_destFull = 80
+    ZSTD_error_noForwardProgress_inputEmpty = 82
     ZSTD_error_frameIndex_tooLarge = 100
     ZSTD_error_seekableIO = 102
     ZSTD_error_dstBuffer_wrong = 104
     ZSTD_error_srcBuffer_wrong = 105
+    ZSTD_error_sequenceProducer_failed = 106
+    ZSTD_error_externalSequences_invalid = 107
     ZSTD_error_maxCode = 120
 end
 
@@ -972,19 +1021,23 @@ function ZSTD_getErrorString(code)
     ccall((:ZSTD_getErrorString, libzstd), Ptr{Cchar}, (ZSTD_ErrorCode,), code)
 end
 
-const ZDICTLIB_VISIBILITY = nothing
+const ZDICTLIB_VISIBLE = nothing
 
-const ZDICTLIB_API = ZDICTLIB_VISIBILITY
+const ZDICTLIB_HIDDEN = nothing
 
-const ZSTDLIB_VISIBILITY = nothing
+const ZDICTLIB_API = ZDICTLIB_VISIBLE
 
-const ZSTDLIB_API = ZSTDLIB_VISIBILITY
+const ZSTDLIB_VISIBLE = nothing
+
+const ZSTDLIB_HIDDEN = nothing
+
+const ZSTDLIB_API = ZSTDLIB_VISIBLE
 
 const ZSTD_VERSION_MAJOR = 1
 
 const ZSTD_VERSION_MINOR = 5
 
-const ZSTD_VERSION_RELEASE = 0
+const ZSTD_VERSION_RELEASE = 5
 
 const ZSTD_VERSION_NUMBER = ZSTD_VERSION_MAJOR * 100 * 100 + ZSTD_VERSION_MINOR * 100 + ZSTD_VERSION_RELEASE
 
@@ -1009,6 +1062,10 @@ const ZSTD_BLOCKSIZE_MAX = 1 << ZSTD_BLOCKSIZELOG_MAX
 const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 
 const ZSTD_CONTENTSIZE_ERROR = Culonglong(0) - 2
+
+const ZSTD_MAX_INPUT_SIZE = nothing
+
+const ZSTDLIB_STATIC_API = ZSTDLIB_VISIBLE
 
 const ZSTD_FRAMEHEADERSIZE_MAX = 18
 
@@ -1062,6 +1119,8 @@ const ZSTD_STRATEGY_MIN = ZSTD_fast
 
 const ZSTD_STRATEGY_MAX = ZSTD_btultra2
 
+const ZSTD_BLOCKSIZE_MAX_MIN = 1 << 10
+
 const ZSTD_OVERLAPLOG_MIN = 0
 
 const ZSTD_OVERLAPLOG_MAX = 9
@@ -1092,8 +1151,6 @@ const ZSTD_SRCSIZEHINT_MIN = 0
 
 const ZSTD_SRCSIZEHINT_MAX = INT_MAX
 
-const ZSTD_HASHLOG3_MAX = 17
-
 const ZSTD_c_rsyncable = ZSTD_c_experimentalParam1
 
 const ZSTD_c_format = ZSTD_c_experimentalParam2
@@ -1118,11 +1175,19 @@ const ZSTD_c_blockDelimiters = ZSTD_c_experimentalParam11
 
 const ZSTD_c_validateSequences = ZSTD_c_experimentalParam12
 
-const ZSTD_c_splitBlocks = ZSTD_c_experimentalParam13
+const ZSTD_c_useBlockSplitter = ZSTD_c_experimentalParam13
 
 const ZSTD_c_useRowMatchFinder = ZSTD_c_experimentalParam14
 
 const ZSTD_c_deterministicRefPrefix = ZSTD_c_experimentalParam15
+
+const ZSTD_c_prefetchCDictTables = ZSTD_c_experimentalParam16
+
+const ZSTD_c_enableSeqProducerFallback = ZSTD_c_experimentalParam17
+
+const ZSTD_c_maxBlockSize = ZSTD_c_experimentalParam18
+
+const ZSTD_c_searchForExternalRepcodes = ZSTD_c_experimentalParam19
 
 const ZSTD_d_format = ZSTD_d_experimentalParam1
 
@@ -1132,9 +1197,15 @@ const ZSTD_d_forceIgnoreChecksum = ZSTD_d_experimentalParam3
 
 const ZSTD_d_refMultipleDDicts = ZSTD_d_experimentalParam4
 
-const ZSTDERRORLIB_VISIBILITY = nothing
+const ZSTD_d_disableHuffmanAssembly = ZSTD_d_experimentalParam5
 
-const ZSTDERRORLIB_API = ZSTDERRORLIB_VISIBILITY
+const ZSTD_SEQUENCE_PRODUCER_ERROR = size_t(-1)
+
+const ZSTDERRORLIB_VISIBLE = nothing
+
+const ZSTDERRORLIB_HIDDEN = nothing
+
+const ZSTDERRORLIB_API = ZSTDERRORLIB_VISIBLE
 
 # exports
 const PREFIXES = ["ZSTD_", "ZDICT_"]

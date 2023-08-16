@@ -3,4 +3,4 @@ Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
 Zstd_jll = "3161d3a3-bdf6-5164-811a-617609db77b4"
 
 [compat]
-Clang = "0.14"
+Clang = "0.17"
