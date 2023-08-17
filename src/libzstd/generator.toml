@@ -1,7 +1,0 @@
-[general]
-library_name = "libzstd"
-output_file_path = "./LibZstd.jl"
-module_name = "LibZstd"
-jll_pkg_name = "Zstd_jll"
-export_symbol_prefixes = ["ZSTD_", "ZDICT_"]
-prologue_file_path  = "./prologue.jl"
