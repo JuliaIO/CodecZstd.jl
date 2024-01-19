@@ -1,4 +1,5 @@
 using CodecZstd
+using Random
 using TranscodingStreams
 using Test
 
