@@ -11,20 +11,21 @@ function Base.show(io::IO, codec::ZstdCompressor)
 end
 
 # Same as the zstd command line tool (v1.2.0).
-const DEFAULT_COMPRESSION_LEVEL = 3
+const DEFAULT_COMPRESSION_LEVEL = DEFAULT_CLEVEL
 
 """
     ZstdCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
 
-Create a new zstd compression codec.
+Create a new zstd compression codec using the streaming API.
+This compressor uses `ZSTD_compressStream`.
 
 Arguments
 ---------
-- `level`: compression level (1..$(MAX_CLEVEL))
+- `level`: compression level ($(MIN_CLEVEL)..$(MAX_CLEVEL))
 """
 function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
-    if !(1 ≤ level ≤ MAX_CLEVEL)
-        throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
+    if !(MIN_CLEVEL ≤ level ≤ MAX_CLEVEL)
+        throw(ArgumentError("level must be within $(MIN_CLEVEL)..$(MAX_CLEVEL)"))
     end
     return ZstdCompressor(CStream(), level)
 end

@@ -4,7 +4,10 @@ export
     ZstdCompressor,
     ZstdCompressorStream,
     ZstdDecompressor,
-    ZstdDecompressorStream
+    ZstdDecompressorStream,
+    ZstdFrameCompressor,
+    ZstdFrameDecompressor,
+    ZstdError
 
 import TranscodingStreams:
     TranscodingStreams,
@@ -23,5 +26,7 @@ include("LibZstd_clang.jl")
 include("libzstd.jl")
 include("compression.jl")
 include("decompression.jl")
+include("frameCompression.jl")
+include("frameDecompression.jl")
 
 end # module

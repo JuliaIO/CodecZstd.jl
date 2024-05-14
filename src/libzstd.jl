@@ -6,15 +6,34 @@ function iserror(code::Csize_t)
 end
 
 function zstderror(stream, code::Csize_t)
+    zstderror(code)
+end
+function zstderror(code::Csize_t)
     ptr = LibZstd.ZSTD_getErrorName(code)
     error("zstd error: ", unsafe_string(ptr))
+end
+
+struct ZstdError <: Exception
+    code::Csize_t
+end
+ZstdError() = ZstdError(typemax(Csize_t))
+function Base.show(io::IO, e::ZstdError)
+    print(io, "ZstdError: ", unsafe_string(LibZstd.ZSTD_getErrorName(e.code)))
 end
 
 function max_clevel()
     return LibZstd.ZSTD_maxCLevel()
 end
+function min_clevel()
+    return LibZstd.ZSTD_minCLevel()
+end
+function default_clevel()
+    return LibZstd.ZSTD_defaultCLevel()
+end
 
 const MAX_CLEVEL = max_clevel()
+const MIN_CLEVEL = min_clevel()
+const DEFAULT_CLEVEL = default_clevel()
 
 const InBuffer = LibZstd.ZSTD_inBuffer
 InBuffer() = InBuffer(C_NULL, 0, 0)
@@ -69,6 +88,14 @@ function compress!(cstream::CStream)
     return LibZstd.ZSTD_compressStream(cstream, cstream.obuffer, cstream.ibuffer)
 end
 
+function frameCompress!(cstream::CStream)
+    return LibZstd.ZSTD_compress2(
+        cstream,
+        cstream.obuffer.dst, cstream.obuffer.size,
+        cstream.ibuffer.src, cstream.ibuffer.size
+    )
+end
+
 function finish!(cstream::CStream)
     return LibZstd.ZSTD_endStream(cstream, cstream.obuffer)
 end
@@ -109,6 +136,14 @@ function decompress!(dstream::DStream)
     return LibZstd.ZSTD_decompressStream(dstream, dstream.obuffer, dstream.ibuffer)
 end
 
+function frameDecompress!(dstream::DStream)
+    return LibZstd.ZSTD_decompressDCtx(
+        dstream,
+        dstream.obuffer.dst, dstream.obuffer.size,
+        dstream.ibuffer.src, dstream.ibuffer.size
+    )
+end
+
 function free!(dstream::DStream)
     return LibZstd.ZSTD_freeDStream(dstream)
 end
@@ -122,4 +157,16 @@ const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
 
 function find_decompressed_size(src::Ptr, size::Integer)
     return LibZstd.ZSTD_findDecompressedSize(src, size)
+end
+function find_decompressed_size(src::Vector{UInt8})
+    return LibZstd.ZSTD_findDecompressedSize(src, sizeof(src))
+end
+function compressed_size_bound(sz)
+    return LibZstd.ZSTD_compressBound(sz)
+end
+function decompressed_size_bound(src::Ptr, size::Integer)
+    return LibZstd.ZSTD_decompressBound(src, size)
+end
+function decompressed_size_bound(src::Vector{UInt8})
+    return LibZstd.ZSTD_decompressBound(src, sizeof(src))
 end

@@ -12,7 +12,8 @@ end
 """
     ZstdDecompressor()
 
-Create a new zstd decompression codec.
+Create a new zstd decompression codec using the streaming API.
+This decompressor uses `ZSTD_decompressStream`.
 """
 function ZstdDecompressor()
     return ZstdDecompressor(DStream())
