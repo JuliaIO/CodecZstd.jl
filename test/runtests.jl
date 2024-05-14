@@ -43,5 +43,9 @@ using Test
     TranscodingStreams.test_roundtrip_transcode(ZstdFrameCompressor, ZstdFrameDecompressor)
     TranscodingStreams.test_roundtrip_transcode(ZstdCompressor, ZstdFrameDecompressor)
 
-    @test_throws "ZstdError: Destination buffer is too small" throw(ZstdError(0xffffffffffffffba))
+    @static if VERSION ≥ v"1.8"
+        @test_throws "ZstdError: Destination buffer is too small" throw(ZstdError(0xffffffffffffffba))
+    else
+        @test_throws ZstdError throw(ZstdError(0xffffffffffffffba))
+    end
 end
