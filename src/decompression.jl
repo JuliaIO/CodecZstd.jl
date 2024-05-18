@@ -76,7 +76,14 @@ function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, outp
         error[] = ErrorException("zstd error")
         return Δin, Δout, :error
     else
-        return Δin, Δout, code == 0 ? :end : :ok
+        if code == 0
+            return Δin, Δout, :end
+        elseif input.size == 0
+            error[] = ErrorException("zstd frame truncated. Expected at least $(code) more bytes")
+            return Δin, Δout, :error
+        else
+            return Δin, Δout, :ok
+        end
     end
 end
 

@@ -3,6 +3,8 @@ using Random
 using TranscodingStreams
 using Test
 
+Random.seed!(1234)
+
 @testset "Zstd Codec" begin
     codec = ZstdCompressor()
     @test codec isa ZstdCompressor
@@ -19,6 +21,20 @@ using Test
     data = [0x28, 0xb5, 0x2f, 0xfd, 0x04, 0x50, 0x19, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x3f, 0xba, 0xc4, 0x59]
     @test read(ZstdDecompressorStream(IOBuffer(data))) == b"foo"
     @test read(ZstdDecompressorStream(IOBuffer(vcat(data, data)))) == b"foofoo"
+
+    @testset "Truncated frames" begin
+        # issue #24
+        @test_throws "zstd frame truncated." transcode(ZstdDecompressor, UInt8[])
+        for trial in 1:1000
+            local uncompressed_data = rand(UInt8, rand(0:100))
+            local compressed_data = transcode(ZstdCompressor, uncompressed_data)
+            local L = length(compressed_data)
+            for n in 0:L-1
+                @test_throws "zstd frame truncated." transcode(ZstdDecompressor, compressed_data[1:n])
+            end
+            @test transcode(ZstdDecompressor, compressed_data) == uncompressed_data
+        end
+    end
 
     @test ZstdCompressorStream <: TranscodingStreams.TranscodingStream
     @test ZstdDecompressorStream <: TranscodingStreams.TranscodingStream
