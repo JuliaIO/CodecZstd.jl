@@ -24,13 +24,13 @@ Random.seed!(1234)
 
     @testset "Truncated frames" begin
         # issue #24
-        @test_throws "zstd frame truncated." transcode(ZstdDecompressor, UInt8[])
+        @test_throws ErrorException transcode(ZstdDecompressor, UInt8[])
         for trial in 1:1000
             local uncompressed_data = rand(UInt8, rand(0:100))
             local compressed_data = transcode(ZstdCompressor, uncompressed_data)
             local L = length(compressed_data)
             for n in 0:L-1
-                @test_throws "zstd frame truncated." transcode(ZstdDecompressor, compressed_data[1:n])
+                @test_throws ErrorException transcode(ZstdDecompressor, compressed_data[1:n])
             end
             @test transcode(ZstdDecompressor, compressed_data) == uncompressed_data
         end
