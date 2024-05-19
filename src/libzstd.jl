@@ -77,6 +77,53 @@ function free!(cstream::CStream)
     return LibZstd.ZSTD_freeCStream(cstream)
 end
 
+function setParameter!(ptr::Ptr{LibZstd.ZSTD_CStream}, param::LibZstd.ZSTD_cParameter, value::Integer)
+    code = LibZstd.ZSTD_CCtx_setParameter(ptr, param, value)
+    if iserror(code)
+        throw(ZstdError(code))
+    end
+    return ptr
+end
+function setParameter!(cstream::CStream, param::LibZstd.ZSTD_cParameter, value::Integer)
+    setParameter!(cstream.ptr, param, value)
+    return cstream
+end
+
+const _parameters_dict = Dict{Symbol, LibZstd.ZSTD_cParameter}(
+    :compressionLevel => LibZstd.ZSTD_c_compressionLevel,
+    :windowLog => LibZstd.ZSTD_c_windowLog,
+    :hashLog => LibZstd.ZSTD_c_hashLog,
+    :chainLog => LibZstd.ZSTD_c_chainLog,
+    :searchLog => LibZstd.ZSTD_c_searchLog,
+    :minMatch => LibZstd.ZSTD_c_minMatch,
+    :targetLength => LibZstd.ZSTD_c_targetLength,
+    :strategy => LibZstd.ZSTD_c_strategy,
+    :targetCBlockSize => LibZstd.ZSTD_c_targetCBlockSize,
+    :enableLongDistanceMatching => LibZstd.ZSTD_c_enableLongDistanceMatching,
+    :ldmHashLog => LibZstd.ZSTD_c_ldmHashLog,
+    :ldmMinMatch => LibZstd.ZSTD_c_ldmMinMatch,
+    :ldmBucketSizeLog => LibZstd.ZSTD_c_ldmBucketSizeLog,
+    :ldmHashRateLog => LibZstd.ZSTD_c_ldmHashRateLog,
+    :contentSizeFlag => LibZstd.ZSTD_c_contentSizeFlag,
+    :checksumFlag => LibZstd.ZSTD_c_checksumFlag,
+    :dictIDFlag => LibZstd.ZSTD_c_dictIDFlag,
+    :nbWorkers => LibZstd.ZSTD_c_nbWorkers,
+    :jobSize => LibZstd.ZSTD_c_jobSize,
+    :overlapLog => LibZstd.ZSTD_c_overlapLog
+)
+
+function setParameter!(cstream::CStream, param::Symbol, value::Integer)
+    return setParameter!(cstream, _parameters_dict[param], value)
+end
+
+function getParameter(ptr::Ptr{LibZstd.ZSTD_CStream}, param::LibZstd.ZSTD_cParameter)
+    value = Ref{Cint}(0)
+    LibZstd.ZSTD_CCtx_getParameter(ptr, param, value)
+    return value[]
+end
+getParameter(cstream::CStream, param::LibZstd.ZSTD_cParameter) = getParameter(cstream.ptr, param)
+getParameter(cstream::CStream, param::Symbol) = getParameter(cstream, _parameters_dict[param])
+
 # ZSTD_DStream
 mutable struct DStream
     ptr::Ptr{LibZstd.ZSTD_DStream}

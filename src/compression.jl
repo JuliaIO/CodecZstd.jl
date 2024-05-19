@@ -3,7 +3,40 @@
 
 struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
-    level::Int
+    function ZstdCompressor(cstream, level)
+        self = new(cstream)
+        setParameter!(self.cstream, :compressionLevel, level)
+        return self
+    end
+end
+
+function Base.propertynames(::Type{ZstdCompressor})
+    (fieldnames(ZstdCompressor)..., :level, keys(_parameters_dict)...)
+end
+Base.propertynames(::ZstdCompressor) = propertynames(ZstdCompressor)
+function Base.getproperty(c::ZstdCompressor, p::Symbol)
+    if p == :level
+        p = :compressionLevel
+    end
+    if p in fieldnames(ZstdCompressor)
+        return getfield(c, p)
+    end
+    if p in keys(_parameters_dict)
+        return getParameter(c.cstream, p)
+    end
+    throw(ArgumentError("ZstdCompressor has no property $p"))
+end
+function Base.setproperty!(c::ZstdCompressor, p::Symbol, v::Integer)
+    if p == :level
+        p = :compressionLevel
+    end
+    if p in fieldnames(ZstdCompressor)
+        return setfield!(c, p, v)
+    end
+    if p in keys(_parameters_dict)
+        return setParameter!(c.cstream, p, v)
+    end
+    throw(ArgumentError("ZstdCompressor has no property $p"))
 end
 
 function Base.show(io::IO, codec::ZstdCompressor)
