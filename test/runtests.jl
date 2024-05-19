@@ -27,4 +27,6 @@ using Test
     TranscodingStreams.test_roundtrip_write(ZstdCompressorStream, ZstdDecompressorStream)
     TranscodingStreams.test_roundtrip_lines(ZstdCompressorStream, ZstdDecompressorStream)
     TranscodingStreams.test_roundtrip_transcode(ZstdCompressor, ZstdDecompressor)
+
+    include("compress_endOp.jl")
 end
