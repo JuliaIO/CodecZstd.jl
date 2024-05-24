@@ -4,10 +4,15 @@
 struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
     level::Int
+    endOp::LibZstd.ZSTD_EndDirective
 end
 
 function Base.show(io::IO, codec::ZstdCompressor)
-    print(io, summary(codec), "(level=$(codec.level))")
+    if codec.endOp == LibZstd.ZSTD_e_end
+        print(io, "ZstdFrameCompressor(level=$(codec.level))")
+    else
+        print(io, summary(codec), "(level=$(codec.level))")
+    end
 end
 
 # Same as the zstd command line tool (v1.2.0).
@@ -27,6 +32,34 @@ function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
     return ZstdCompressor(CStream(), level)
+end
+ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, :continue)
+
+"""
+   ZstdFrameCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
+
+Create a new zstd compression codec that reads the available input and then
+closes the frame, encoding the decompressed size of that frame.
+
+Arguments
+---------
+- `level`: compression level (1..$(MAX_CLEVEL))
+"""
+function ZstdFrameCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
+    if !(1 ≤ level ≤ MAX_CLEVEL)
+        throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
+    end
+    return ZstdCompressor(CStream(), level, :end)
+end
+# pretend that ZstdFrameCompressor is a compressor type
+function TranscodingStreams.transcode(C::typeof(ZstdFrameCompressor), args...)
+    codec = C()
+    initialize(codec)
+    try
+        return transcode(codec, args...)
+    finally
+        finalize(codec)
+    end
 end
 
 const ZstdCompressorStream{S} = TranscodingStream{ZstdCompressor,S} where S<:IO
@@ -84,7 +117,7 @@ function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output
     if input.size == 0
         code = finish!(cstream)
     else
-        code = compress!(cstream)
+        code = compress!(cstream; endOp = codec.endOp)
     end
     Δin = Int(cstream.ibuffer.pos)
     Δout = Int(cstream.obuffer.pos)

@@ -3,6 +3,7 @@ module CodecZstd
 export
     ZstdCompressor,
     ZstdCompressorStream,
+    ZstdFrameCompressor,
     ZstdDecompressor,
     ZstdDecompressorStream
 
