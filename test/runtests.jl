@@ -44,5 +44,11 @@ Random.seed!(1234)
     TranscodingStreams.test_roundtrip_lines(ZstdCompressorStream, ZstdDecompressorStream)
     TranscodingStreams.test_roundtrip_transcode(ZstdCompressor, ZstdDecompressor)
 
+    frame_encoder = io -> TranscodingStream(ZstdFrameCompressor(), io)
+    TranscodingStreams.test_roundtrip_read(frame_encoder, ZstdDecompressorStream)
+    TranscodingStreams.test_roundtrip_write(frame_encoder, ZstdDecompressorStream)
+    TranscodingStreams.test_roundtrip_lines(frame_encoder, ZstdDecompressorStream)
+    TranscodingStreams.test_roundtrip_transcode(ZstdFrameCompressor, ZstdDecompressor)
+
     include("compress_endOp.jl")
 end

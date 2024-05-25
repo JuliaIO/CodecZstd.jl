@@ -3,6 +3,7 @@ module CodecZstd
 export
     ZstdCompressor,
     ZstdCompressorStream,
+    ZstdFrameCompressor,
     ZstdDecompressor,
     ZstdDecompressorStream
 
@@ -22,6 +23,7 @@ include("LibZstd_clang.jl")
 # Library functions that have a Julian interface. This file originally preceded the above module
 include("libzstd.jl")
 include("compression.jl")
+include("framecompressor.jl")
 include("decompression.jl")
 
 end # module
