@@ -82,17 +82,19 @@ function TranscodingStreams.process(codec::ZstdFrameCompressor, input::Memory, o
     end
     if iszero(input.size)
         # write the output
-        cstream = codec.cstream
-        if !codec.outputting[]
-            codec.outputting[] = true
-            cstream.ibuffer.pos = 0
+        GC.@preserve in_buffer begin
+            cstream = codec.cstream
+            if !codec.outputting[]
+                codec.outputting[] = true
+                cstream.ibuffer.pos = 0
+            end
+            cstream.ibuffer.src = pointer(in_buffer)
+            cstream.ibuffer.size = nb
+            cstream.obuffer.dst = output.ptr
+            cstream.obuffer.size = output.size
+            cstream.obuffer.pos = 0
+            code = compress!(cstream; endOp = LibZstd.ZSTD_e_end)
         end
-        cstream.ibuffer.src = pointer(in_buffer)
-        cstream.ibuffer.size = nb
-        cstream.obuffer.dst = output.ptr
-        cstream.obuffer.size = output.size
-        cstream.obuffer.pos = 0
-        code = compress!(cstream; endOp = LibZstd.ZSTD_e_end)
         Δout = Int(cstream.obuffer.pos)
         if iserror(code)
             codec.dead[] = true
