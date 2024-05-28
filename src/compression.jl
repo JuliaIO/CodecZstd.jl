@@ -108,9 +108,16 @@ end
 
 function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, error::Error)
     cstream = codec.cstream
-    cstream.ibuffer.src = input.ptr
-    cstream.ibuffer.size = input.size
-    cstream.ibuffer.pos = 0
+    ibuffer_starting_pos = UInt(0)
+    if codec.endOp == LibZstd.ZSTD_e_end && cstream.ibuffer.size != cstream.ibuffer.pos
+        # While saving a frame, the prior process run did not complete processing.
+        # Re-run with the same input buffer.
+        ibuffer_starting_pos = cstream.ibuffer.pos
+    else
+        cstream.ibuffer.src = input.ptr
+        cstream.ibuffer.size = input.size
+        cstream.ibuffer.pos = 0
+    end
     cstream.obuffer.dst = output.ptr
     cstream.obuffer.size = output.size
     cstream.obuffer.pos = 0
@@ -119,10 +126,11 @@ function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output
     else
         code = compress!(cstream; endOp = codec.endOp)
     end
-    Δin = Int(cstream.ibuffer.pos)
+    Δin = Int(cstream.ibuffer.pos - ibuffer_starting_pos)
     Δout = Int(cstream.obuffer.pos)
     if iserror(code)
-        error[] = ErrorException("zstd error")
+        ptr = LibZstd.ZSTD_getErrorName(code)
+        error[] = ErrorException("zstd error: " * unsafe_string(ptr))
         return Δin, Δout, :error
     else
         return Δin, Δout, input.size == 0 && code == 0 ? :end : :ok
