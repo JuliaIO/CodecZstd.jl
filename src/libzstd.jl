@@ -16,12 +16,26 @@ end
 
 const MAX_CLEVEL = max_clevel()
 
+# InBuffer is the C struct ZSTD_inBuffer
 const InBuffer = LibZstd.ZSTD_inBuffer
 InBuffer() = InBuffer(C_NULL, 0, 0)
 Base.unsafe_convert(::Type{Ptr{InBuffer}}, buffer::InBuffer) = Ptr{InBuffer}(pointer_from_objref(buffer))
+function reset!(buf::InBuffer)
+    buf.src = C_NULL
+    buf.pos = 0
+    buf.size = 0
+end
+
+# OutBuffer is the C struct ZSTD_outBuffer
 const OutBuffer = LibZstd.ZSTD_outBuffer
 OutBuffer() = OutBuffer(C_NULL, 0, 0)
 Base.unsafe_convert(::Type{Ptr{OutBuffer}}, buffer::OutBuffer) = Ptr{OutBuffer}(pointer_from_objref(buffer))
+function reset!(buf::OutBuffer)
+    buf.dst = C_NULL
+    buf.pos = 0
+    buf.size = 0
+end
+
 
 # ZSTD_CStream
 mutable struct CStream
@@ -60,9 +74,9 @@ function reset!(cstream::CStream, srcsize::Integer)
         # explicitly specified.
         srcsize = ZSTD_CONTENTSIZE_UNKNOWN
     end
+    reset!(cstream.ibuffer)
+    reset!(cstream.obuffer)
     return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream, srcsize)
-    #return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
-
 end
 
 """

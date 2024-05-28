@@ -83,9 +83,8 @@ function TranscodingStreams.initialize(codec::ZstdCompressor)
     if iserror(code)
         zstderror(codec.cstream, code)
     end
-    codec.cstream.ibuffer.src = C_NULL
-    codec.cstream.ibuffer.size = 0
-    codec.cstream.ibuffer.pos = 0
+    reset!(codec.cstream.ibuffer)
+    reset!(codec.cstream.obuffer)
     return
 end
 
@@ -97,9 +96,8 @@ function TranscodingStreams.finalize(codec::ZstdCompressor)
         end
         codec.cstream.ptr = C_NULL
     end
-    codec.cstream.ibuffer.src = C_NULL
-    codec.cstream.ibuffer.size = 0
-    codec.cstream.ibuffer.pos = 0
+    reset!(codec.cstream.ibuffer)
+    reset!(codec.cstream.obuffer)
     return
 end
 
@@ -117,10 +115,18 @@ function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output
     ibuffer_starting_pos = UInt(0)
     if codec.endOp == LibZstd.ZSTD_e_end &&
        cstream.ibuffer.size != cstream.ibuffer.pos
-            # While saving a frame, the prior process run did not complete processing.
-            # Re-run with the same size and pos
+            # While saving a frame, the prior process run did not finish writing the frame.
+            # A positive code indicates the need for additional output buffer space.
+            # Re-run with the same cstream.ibuffer.size as pledged for the frame,
+            # otherwise a "Src size is incorrect" error will occur.
+
+            # For the current frame, cstream.ibuffer.size - cstream.ibuffer.pos
+            # must reflect the remaining data. Thus neither size or pos can change.
+            # Store the starting pos since it will be non-zero.
             ibuffer_starting_pos = cstream.ibuffer.pos
-            # Set the pointer relative to input.ptr, but keep size and pos
+
+            # Set the pointer relative to input.ptr such that
+            # cstream.ibuffer.src + cstream.ibuffer.pos == input.ptr
             cstream.ibuffer.src = input.ptr - cstream.ibuffer.pos
     else
         cstream.ibuffer.src = input.ptr
