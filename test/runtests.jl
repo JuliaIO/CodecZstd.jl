@@ -44,5 +44,43 @@ Random.seed!(1234)
     TranscodingStreams.test_roundtrip_lines(ZstdCompressorStream, ZstdDecompressorStream)
     TranscodingStreams.test_roundtrip_transcode(ZstdCompressor, ZstdDecompressor)
 
+    frame_encoder = io -> TranscodingStream(ZstdFrameCompressor(), io)
+    TranscodingStreams.test_roundtrip_read(frame_encoder, ZstdDecompressorStream)
+    TranscodingStreams.test_roundtrip_write(frame_encoder, ZstdDecompressorStream)
+    TranscodingStreams.test_roundtrip_lines(frame_encoder, ZstdDecompressorStream)
+    TranscodingStreams.test_roundtrip_transcode(ZstdFrameCompressor, ZstdDecompressor)
+
+    @testset "ZstdFrameCompressor streaming edge case" begin
+        codec = ZstdFrameCompressor()
+        TranscodingStreams.initialize(codec)
+        e = TranscodingStreams.Error()
+        r = TranscodingStreams.startproc(codec, :write, e)
+        @test r == :ok
+        # data buffers
+        data = rand(UInt8, 32*1024*1024)
+        buffer1 = copy(data)
+        buffer2 = zeros(UInt8, length(data)*2)
+        GC.@preserve buffer1 buffer2 begin
+            total_out = 0
+            total_in = 0
+            while total_in < length(data) || r != :end
+                in_size = min(length(buffer1) - total_in, 1024*1024)
+                out_size = min(length(buffer2) - total_out, 1024)
+                input = TranscodingStreams.Memory(pointer(buffer1, total_in + 1), UInt(in_size))
+                output = TranscodingStreams.Memory(pointer(buffer2, total_out + 1), UInt(out_size))
+                Δin, Δout, r = TranscodingStreams.process(codec, input, output, e)
+                if r == :error
+                    throw(e[])
+                end
+                total_out += Δout
+                total_in += Δin
+            end
+            @test r == :end
+        end
+        TranscodingStreams.finalize(codec)
+        resize!(buffer2, total_out)
+        @test transcode(ZstdDecompressor, buffer2) == data
+    end
+
     include("compress_endOp.jl")
 end
