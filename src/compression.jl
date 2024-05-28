@@ -5,7 +5,6 @@ struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
     level::Int
     endOp::LibZstd.ZSTD_EndDirective
-    frameBufferSize::Int
 end
 
 function Base.show(io::IO, codec::ZstdCompressor)
@@ -34,7 +33,7 @@ function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     end
     return ZstdCompressor(CStream(), level)
 end
-ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, :continue, 0)
+ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, :continue)
 
 """
    ZstdFrameCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
@@ -46,11 +45,11 @@ Arguments
 ---------
 - `level`: compression level (1..$(MAX_CLEVEL))
 """
-function ZstdFrameCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL, frameBufferSize::Integer=1024*1024)
+function ZstdFrameCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     if !(1 ≤ level ≤ MAX_CLEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
-    return ZstdCompressor(CStream(), level, :end, frameBufferSize)
+    return ZstdCompressor(CStream(), level, :end)
 end
 # pretend that ZstdFrameCompressor is a compressor type
 function TranscodingStreams.transcode(C::typeof(ZstdFrameCompressor), args...)
@@ -84,11 +83,9 @@ function TranscodingStreams.initialize(codec::ZstdCompressor)
     if iserror(code)
         zstderror(codec.cstream, code)
     end
-    if codec.endOp == LibZstd.ZSTD_e_end
-        codec.cstream.ibuffer.src = Libc.malloc(codec.frameBufferSize)
-        codec.cstream.ibuffer.size = 0
-        codec.cstream.ibuffer.pos = 0
-    end
+    codec.cstream.ibuffer.src = C_NULL
+    codec.cstream.ibuffer.size = 0
+    codec.cstream.ibuffer.pos = 0
     return
 end
 
@@ -100,12 +97,9 @@ function TranscodingStreams.finalize(codec::ZstdCompressor)
         end
         codec.cstream.ptr = C_NULL
     end
-    if codec.endOp == LibZstd.ZSTD_e_end && codec.cstream.ibuffer.src != C_NULL
-        Libc.free(codec.cstream.ibuffer.src)
-        codec.cstream.ibuffer.src = C_NULL
-        codec.cstream.ibuffer.size = 0
-        codec.cstream.ibuffer.pos = 0
-    end
+    codec.cstream.ibuffer.src = C_NULL
+    codec.cstream.ibuffer.size = 0
+    codec.cstream.ibuffer.pos = 0
     return
 end
 
@@ -121,16 +115,13 @@ end
 function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, error::Error)
     cstream = codec.cstream
     ibuffer_starting_pos = UInt(0)
-    if codec.endOp == LibZstd.ZSTD_e_end
-        if cstream.ibuffer.size != cstream.ibuffer.pos
+    if codec.endOp == LibZstd.ZSTD_e_end &&
+       cstream.ibuffer.size != cstream.ibuffer.pos
             # While saving a frame, the prior process run did not complete processing.
-            # Re-run with the same input buffer.
+            # Re-run with the same size and pos
             ibuffer_starting_pos = cstream.ibuffer.pos
-        else
-            cstream.ibuffer.size = min(codec.frameBufferSize, input.size)
-            unsafe_copyto!(Ptr{UInt8}(cstream.ibuffer.src), input.ptr, cstream.ibuffer.size)
-            cstream.ibuffer.pos = 0
-        end
+            # Set the pointer relative to input.ptr, but keep size and pos
+            cstream.ibuffer.src = input.ptr - cstream.ibuffer.pos
     else
         cstream.ibuffer.src = input.ptr
         cstream.ibuffer.size = input.size
