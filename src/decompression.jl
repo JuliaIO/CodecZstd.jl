@@ -38,6 +38,8 @@ function TranscodingStreams.initialize(codec::ZstdDecompressor)
     if iserror(code)
         throw(ZstdError(code))
     end
+    reset!(codec.dstream.ibuffer)
+    reset!(codec.dstream.obuffer)
     return
 end
 
@@ -49,6 +51,8 @@ function TranscodingStreams.finalize(codec::ZstdDecompressor)
         end
         codec.dstream.ptr = C_NULL
     end
+    reset!(codec.dstream.ibuffer)
+    reset!(codec.dstream.obuffer)
     return
 end
 
