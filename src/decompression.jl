@@ -77,7 +77,7 @@ function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, outp
     Δin = Int(dstream.ibuffer.pos)
     Δout = Int(dstream.obuffer.pos)
     if iserror(code)
-        error[] = ZstdErorr(code)
+        error[] = ZstdError(code)
         return Δin, Δout, :error
     else
         if code == 0
