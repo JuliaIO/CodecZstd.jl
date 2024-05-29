@@ -16,12 +16,26 @@ end
 
 const MAX_CLEVEL = max_clevel()
 
+# InBuffer is the C struct ZSTD_inBuffer
 const InBuffer = LibZstd.ZSTD_inBuffer
 InBuffer() = InBuffer(C_NULL, 0, 0)
 Base.unsafe_convert(::Type{Ptr{InBuffer}}, buffer::InBuffer) = Ptr{InBuffer}(pointer_from_objref(buffer))
+function reset!(buf::InBuffer)
+    buf.src = C_NULL
+    buf.pos = 0
+    buf.size = 0
+end
+
+# OutBuffer is the C struct ZSTD_outBuffer
 const OutBuffer = LibZstd.ZSTD_outBuffer
 OutBuffer() = OutBuffer(C_NULL, 0, 0)
 Base.unsafe_convert(::Type{Ptr{OutBuffer}}, buffer::OutBuffer) = Ptr{OutBuffer}(pointer_from_objref(buffer))
+function reset!(buf::OutBuffer)
+    buf.dst = C_NULL
+    buf.pos = 0
+    buf.size = 0
+end
+
 
 # ZSTD_CStream
 mutable struct CStream
@@ -60,13 +74,42 @@ function reset!(cstream::CStream, srcsize::Integer)
         # explicitly specified.
         srcsize = ZSTD_CONTENTSIZE_UNKNOWN
     end
+    reset!(cstream.ibuffer)
+    reset!(cstream.obuffer)
     return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream, srcsize)
-    #return ccall((:ZSTD_resetCStream, libzstd), Csize_t, (Ptr{Cvoid}, Culonglong), cstream.ptr, srcsize)
-
 end
 
-function compress!(cstream::CStream)
-    return LibZstd.ZSTD_compressStream(cstream, cstream.obuffer, cstream.ibuffer)
+"""
+    compress!(cstream::CStream; endOp=:continue)
+
+Compress a Zstandard `CStream`. Optionally, provide one one of the following end directives
+* `:continue` - (default) collect more data, encoder decides when to output compressed result, for optimal compression ratio
+* `:flush` - flush any data provided so far
+* `:end` - flush any remaining data _and_ close current frame
+
+If `:end` is provided on the first call to `compress!`, the size of the input data will be recorded in the frame header.
+This is equivalent to calling [`CodecZstd.LibZstd.ZSTD_compress2`](@ref).
+See also [`CodecZstd.LibZstd.ZSTD_CCtx_setPledgedSrcSize`](@ref).
+
+See the Zstd manual for additional details:
+https://facebook.github.io/zstd/zstd_manual.html
+"""
+function compress!(cstream::CStream; endOp::Union{Symbol,LibZstd.ZSTD_EndDirective}=LibZstd.ZSTD_e_continue)
+    return LibZstd.ZSTD_compressStream2(cstream, cstream.obuffer, cstream.ibuffer, endOp)
+end
+
+# Support endOp keyword of compress! above when providing a Symbol
+function Base.convert(::Type{LibZstd.ZSTD_EndDirective}, endOp::Symbol)
+    endOp = if endOp == :continue
+        LibZstd.ZSTD_e_continue
+    elseif endOp == :flush
+        LibZstd.ZSTD_e_flush
+    elseif endOp == :end
+        LibZstd.ZSTD_e_end
+    else
+        throw(ArgumentError("Received value `:$endOp` for `endOp`, but only :continue, :flush, or :end are allowed values."))
+    end
+    return endOp
 end
 
 function finish!(cstream::CStream)
