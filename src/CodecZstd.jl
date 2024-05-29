@@ -4,7 +4,8 @@ export
     ZstdCompressor,
     ZstdCompressorStream,
     ZstdDecompressor,
-    ZstdDecompressorStream
+    ZstdDecompressorStream,
+    ZstdError
 
 import TranscodingStreams:
     TranscodingStreams,
