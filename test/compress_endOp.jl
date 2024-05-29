@@ -59,3 +59,15 @@ end
         Base.Libc.free(cstream.obuffer.dst)
     end
 end
+
+@testset "ZstdFrameCompressor" begin
+    data = rand(1:100, 1024*1024)
+    compressed = transcode(ZstdFrameCompressor, copy(reinterpret(UInt8, data)))
+    GC.@preserve compressed begin
+        @test CodecZstd.find_decompressed_size(pointer(compressed), sizeof(compressed)) == sizeof(data)
+    end
+    @test reinterpret(Int, transcode(ZstdDecompressor, compressed)) == data
+    iob = IOBuffer()
+    print(iob, ZstdFrameCompressor())
+    @test startswith(String(take!(iob)), "ZstdFrameCompressor")
+end
