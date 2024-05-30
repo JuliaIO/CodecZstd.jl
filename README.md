@@ -39,10 +39,12 @@ compressed = transcode(ZstdCompressor, text)
 
 This package exports following codecs and streams:
 
-| Codec              | Stream                   |
-| ------------------ | ------------------------ |
-| `ZstdCompressor`   | `ZstdCompressorStream`   |
-| `ZstdDecompressor` | `ZstdDecompressorStream` |
+| Codec                 | Stream                   |
+| ------------------    | ------------------------ |
+| `ZstdCompressor`      | `ZstdCompressorStream`   |
+| `ZstdDecompressor`    | `ZstdDecompressorStream` |
+
+Version 0.8.3 also introduced the virtual codec `ZstdFrameCompressor` which stores the decompressed content size in the frame header. Currently, `ZstdFrameCompressor` is an alternate constructor for `ZstdCompressor`, but that is an implementation detail which should not be relied upon.
 
 See docstrings and [TranscodingStreams.jl](https://github.com/bicycle1885/TranscodingStreams.jl) for details.
 
