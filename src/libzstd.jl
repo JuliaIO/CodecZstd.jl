@@ -169,6 +169,11 @@ end
 const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
 
+# ZSTD_findDecompressedSize gets the decompressed size of all available frames
+# Alternatively, consider ZSTD_getFrameContentSize for a single frame
 function find_decompressed_size(src::Ptr, size::Integer)
     return LibZstd.ZSTD_findDecompressedSize(src, size)
+end
+function find_decompressed_size(src::Vector{UInt8})
+    return LibZstd.ZSTD_findDecompressedSize(src, length(src))
 end
