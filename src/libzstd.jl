@@ -60,6 +60,12 @@ function initialize!(cstream::CStream, level::Integer)
     return LibZstd.ZSTD_initCStream(cstream, level)
 end
 
+function reset!(cstream::CStream)
+    # Resetting session never fails.
+    # Also this will reset the pledged size
+    return LibZstd.ZSTD_CCtx_reset(cstream, LibZstd.ZSTD_reset_session_only)
+end
+
 function reset!(cstream::CStream, srcsize::Integer)
     # ZSTD_resetCStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2253-L2272
@@ -163,6 +169,11 @@ end
 const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
 
+# ZSTD_findDecompressedSize gets the decompressed size of all available frames
+# Alternatively, consider ZSTD_getFrameContentSize for a single frame
 function find_decompressed_size(src::Ptr, size::Integer)
     return LibZstd.ZSTD_findDecompressedSize(src, size)
+end
+function find_decompressed_size(src::Vector{UInt8})
+    return LibZstd.ZSTD_findDecompressedSize(src, length(src))
 end

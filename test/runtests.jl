@@ -32,6 +32,7 @@ Random.seed!(1234)
             for n in 0:L-1
                 @test_throws ErrorException transcode(ZstdDecompressor, compressed_data[1:n])
             end
+            @test CodecZstd.find_decompressed_size(compressed_data) == length(uncompressed_data)
             @test transcode(ZstdDecompressor, compressed_data) == uncompressed_data
         end
     end

@@ -77,6 +77,25 @@ end
 
 # Methods
 # -------
+function TranscodingStreams.transcode(
+    codec::ZstdCompressor,
+    input::TranscodingStreams.Buffer,
+    output::Union{TranscodingStreams.Buffer,Nothing} = nothing,
+)
+    code = LibZstd.ZSTD_CCtx_setPledgedSrcSize(codec.cstream, TranscodingStreams.buffersize(input))
+    if iserror(code)
+        zstderror(codec.cstream, code)
+    end
+    return invoke(
+        TranscodingStreams.transcode,
+        Tuple{
+              TranscodingStreams.Codec,
+              TranscodingStreams.Buffer,
+              typeof(output)
+        },
+        codec, input, output
+    )
+end
 
 function TranscodingStreams.initialize(codec::ZstdCompressor)
     code = initialize!(codec.cstream, codec.level)
@@ -102,11 +121,8 @@ function TranscodingStreams.finalize(codec::ZstdCompressor)
 end
 
 function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
-    code = reset!(codec.cstream, 0 #=unknown source size=#)
-    if iserror(code)
-        error[] = ErrorException("zstd error")
-        return :error
-    end
+    reset!(codec.cstream.ibuffer)
+    reset!(codec.cstream.obuffer)
     return :ok
 end
 
@@ -146,6 +162,7 @@ function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output
     if iserror(code)
         ptr = LibZstd.ZSTD_getErrorName(code)
         error[] = ErrorException("zstd error: " * unsafe_string(ptr))
+        reset!(cstream)
         return Δin, Δout, :error
     else
         return Δin, Δout, input.size == 0 && code == 0 ? :end : :ok
