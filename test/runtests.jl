@@ -50,6 +50,11 @@ Random.seed!(1234)
     TranscodingStreams.test_roundtrip_lines(frame_encoder, ZstdDecompressorStream)
     TranscodingStreams.test_roundtrip_transcode(ZstdFrameCompressor, ZstdDecompressor)
 
+    if isdefined(TranscodingStreams, :test_roundtrip_seekstart)
+        TranscodingStreams.test_roundtrip_seekstart(ZstdCompressorStream, ZstdDecompressorStream)
+        TranscodingStreams.test_roundtrip_seekstart(frame_encoder, ZstdDecompressorStream)
+    end
+
     @testset "ZstdFrameCompressor streaming edge case" begin
         codec = ZstdFrameCompressor()
         TranscodingStreams.initialize(codec)
