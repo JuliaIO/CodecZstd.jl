@@ -144,6 +144,7 @@ end
     ZSTD_c_minMatch = 105
     ZSTD_c_targetLength = 106
     ZSTD_c_strategy = 107
+    ZSTD_c_targetCBlockSize = 130
     ZSTD_c_enableLongDistanceMatching = 160
     ZSTD_c_ldmHashLog = 161
     ZSTD_c_ldmMinMatch = 162
@@ -1160,8 +1161,6 @@ const ZSTD_c_forceMaxWindow = ZSTD_c_experimentalParam3
 const ZSTD_c_forceAttachDict = ZSTD_c_experimentalParam4
 
 const ZSTD_c_literalCompressionMode = ZSTD_c_experimentalParam5
-
-const ZSTD_c_targetCBlockSize = ZSTD_c_experimentalParam6
 
 const ZSTD_c_srcSizeHint = ZSTD_c_experimentalParam7
 
