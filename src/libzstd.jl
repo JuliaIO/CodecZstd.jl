@@ -5,9 +5,22 @@ function iserror(code::Csize_t)
     return LibZstd.ZSTD_isError(code) != 0
 end
 
+# deprecated error reporting
 function zstderror(stream, code::Csize_t)
+    zstderror(code)
+end
+function zstderror(code::Integer)
     ptr = LibZstd.ZSTD_getErrorName(code)
     error("zstd error: ", unsafe_string(ptr))
+end
+
+# new error reporting
+struct ZstdError <: Exception
+    code::Csize_t
+end
+ZstdError() = ZstdError(typemax(Csize_t))
+function Base.show(io::IO, e::ZstdError)
+    print(io, "ZstdError: ", unsafe_string(LibZstd.ZSTD_getErrorName(e.code)))
 end
 
 function max_clevel()
