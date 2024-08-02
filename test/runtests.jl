@@ -1,6 +1,12 @@
 using CodecZstd
 using Random
 using TranscodingStreams
+using TestsForCodecPackages:
+    test_roundtrip_read,
+    test_roundtrip_write,
+    test_roundtrip_transcode,
+    test_roundtrip_lines,
+    test_roundtrip_seekstart
 using Test
 
 Random.seed!(1234)
@@ -39,21 +45,18 @@ Random.seed!(1234)
     @test ZstdCompressorStream <: TranscodingStreams.TranscodingStream
     @test ZstdDecompressorStream <: TranscodingStreams.TranscodingStream
 
-    TranscodingStreams.test_roundtrip_read(ZstdCompressorStream, ZstdDecompressorStream)
-    TranscodingStreams.test_roundtrip_write(ZstdCompressorStream, ZstdDecompressorStream)
-    TranscodingStreams.test_roundtrip_lines(ZstdCompressorStream, ZstdDecompressorStream)
-    TranscodingStreams.test_roundtrip_transcode(ZstdCompressor, ZstdDecompressor)
+    test_roundtrip_read(ZstdCompressorStream, ZstdDecompressorStream)
+    test_roundtrip_write(ZstdCompressorStream, ZstdDecompressorStream)
+    test_roundtrip_lines(ZstdCompressorStream, ZstdDecompressorStream)
+    test_roundtrip_transcode(ZstdCompressor, ZstdDecompressor)
+    test_roundtrip_seekstart(ZstdCompressorStream, ZstdDecompressorStream)
 
     frame_encoder = io -> TranscodingStream(ZstdFrameCompressor(), io)
-    TranscodingStreams.test_roundtrip_read(frame_encoder, ZstdDecompressorStream)
-    TranscodingStreams.test_roundtrip_write(frame_encoder, ZstdDecompressorStream)
-    TranscodingStreams.test_roundtrip_lines(frame_encoder, ZstdDecompressorStream)
-    TranscodingStreams.test_roundtrip_transcode(ZstdFrameCompressor, ZstdDecompressor)
-
-    if isdefined(TranscodingStreams, :test_roundtrip_seekstart)
-        TranscodingStreams.test_roundtrip_seekstart(ZstdCompressorStream, ZstdDecompressorStream)
-        TranscodingStreams.test_roundtrip_seekstart(frame_encoder, ZstdDecompressorStream)
-    end
+    test_roundtrip_read(frame_encoder, ZstdDecompressorStream)
+    test_roundtrip_write(frame_encoder, ZstdDecompressorStream)
+    test_roundtrip_lines(frame_encoder, ZstdDecompressorStream)
+    test_roundtrip_transcode(ZstdFrameCompressor, ZstdDecompressor)
+    test_roundtrip_seekstart(frame_encoder, ZstdDecompressorStream)
 
     @testset "ZstdFrameCompressor streaming edge case" begin
         codec = ZstdFrameCompressor()
