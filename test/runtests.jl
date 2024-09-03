@@ -91,4 +91,5 @@ Random.seed!(1234)
     end
 
     include("compress_endOp.jl")
+    include("zstderror.jl")
 end
