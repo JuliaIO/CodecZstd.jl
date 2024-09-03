@@ -14,7 +14,7 @@ using Test
         GC.@preserve data begin
             # default endOp
             @test CodecZstd.compress!(cstream; endOp=:continue) == 0
-            @test CodecZstd.find_decompressed_size(cstream.obuffer.dst, cstream.obuffer.pos) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+            @test CodecZstd.LibZstd.ZSTD_getFrameContentSize(cstream.obuffer.dst, cstream.obuffer.pos) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
         end
     finally
         Base.Libc.free(cstream.obuffer.dst)
@@ -33,7 +33,7 @@ end
     try
         GC.@preserve data begin
             @test CodecZstd.compress!(cstream; endOp=:flush) == 0
-            @test CodecZstd.find_decompressed_size(cstream.obuffer.dst, cstream.obuffer.pos) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+            @test CodecZstd.LibZstd.ZSTD_getFrameContentSize(cstream.obuffer.dst, cstream.obuffer.pos) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
         end
     finally
         Base.Libc.free(cstream.obuffer.dst)
@@ -53,7 +53,7 @@ end
         GC.@preserve data begin
             # The frame should contain the decompressed size
             @test CodecZstd.compress!(cstream; endOp=:end) == 0
-            @test CodecZstd.find_decompressed_size(cstream.obuffer.dst, cstream.obuffer.pos) == sizeof(data)
+            @test CodecZstd.LibZstd.ZSTD_getFrameContentSize(cstream.obuffer.dst, cstream.obuffer.pos) == sizeof(data)
         end
     finally
         Base.Libc.free(cstream.obuffer.dst)
@@ -64,7 +64,7 @@ end
     data = rand(1:100, 1024*1024)
     compressed = transcode(ZstdFrameCompressor, copy(reinterpret(UInt8, data)))
     GC.@preserve compressed begin
-        @test CodecZstd.find_decompressed_size(pointer(compressed), sizeof(compressed)) == sizeof(data)
+        @test CodecZstd.LibZstd.ZSTD_getFrameContentSize(pointer(compressed), sizeof(compressed)) == sizeof(data)
     end
     @test reinterpret(Int, transcode(ZstdDecompressor, compressed)) == data
     iob = IOBuffer()

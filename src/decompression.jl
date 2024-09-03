@@ -92,10 +92,11 @@ function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, outp
 end
 
 function TranscodingStreams.expectedsize(codec::ZstdDecompressor, input::Memory)
-    ret = find_decompressed_size(input.ptr, input.size)
+    ret = LibZstd.ZSTD_getFrameContentSize(input.ptr, input.size)
     if ret == ZSTD_CONTENTSIZE_ERROR
         # something is bad, but we ignore it here
-        return Int(input.size)
+        # but no reason to allocate a ton of extra space if the data isn't valid zstd
+        return 8
     elseif ret == ZSTD_CONTENTSIZE_UNKNOWN
         # random guess
         return Int(input.size * 2)

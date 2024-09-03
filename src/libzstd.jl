@@ -162,7 +162,3 @@ end
 
 const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
-
-function find_decompressed_size(src::Ptr, size::Integer)
-    return LibZstd.ZSTD_findDecompressedSize(src, size)
-end
