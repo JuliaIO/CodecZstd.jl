@@ -130,6 +130,7 @@ Random.seed!(1234)
         GC.@preserve v begin
             @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)) == 5
             @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)+length(buffer2)) == 11
+            @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)+length(buffer2)-1) == CodecZstd.ZSTD_CONTENTSIZE_ERROR
         end
         @test CodecZstd.find_decompressed_size(v) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
 

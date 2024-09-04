@@ -178,7 +178,7 @@ decompressed.
 May return `ZSTD_CONTENTSIZE_UNKNOWN` or `ZSTD_CONTENTSIZE_ERROR`:
 1. Return a code above if `ZSTD_getFrameContentSize` returns the code.
 2. Return `ZSTD_CONTENTSIZE_ERROR` if `ZSTD_findFrameCompressedSize` errors.
-3. REturn `ZSTD_CONTENTSIZE_ERROR` if the frame extends beyond `srcSize`
+3. Return `ZSTD_CONTENTSIZE_ERROR` if the frame extends beyond `srcSize`
 """
 function find_decompressed_size(src::Vector{UInt8})
     GC.@preserve src find_decompressed_size(pointer(src), length(src))
