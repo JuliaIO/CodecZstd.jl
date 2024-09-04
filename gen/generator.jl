@@ -28,14 +28,25 @@ using Clang.Generators
 using Zstd_jll
 
 
+if !@isdefined(ZSTD_STATIC_LINKING_ONLY)
+    const ZSTD_STATIC_LINKING_ONLY = false
+end
+
 cd(@__DIR__)
 
 include_dir = joinpath(Zstd_jll.artifact_dir, "include") |> normpath
 options = load_options(joinpath(@__DIR__, "generator.toml"))
+if ZSTD_STATIC_LINKING_ONLY
+    @warn "Static linking only functions will be included"
+    options["general"]["output_file_path"] = "../test/LibZstd_clang_static.jl"
+    options["general"]["module_name"] = "LibZstdStatic"
+end
 
 args = get_default_args()
 push!(args, "-I$include_dir")
-push!(args, "-DZSTD_STATIC_LINKING_ONLY")
+if ZSTD_STATIC_LINKING_ONLY
+    push!(args, "-DZSTD_STATIC_LINKING_ONLY")
+end
 
 headers = [joinpath(include_dir, header) for header in readdir(include_dir) if endswith(header, ".h")]
 

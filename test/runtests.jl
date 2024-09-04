@@ -144,4 +144,5 @@ Random.seed!(1234)
     end
 
     include("compress_endOp.jl")
+    include("static_only_tests.jl")
 end
