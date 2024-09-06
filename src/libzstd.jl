@@ -184,8 +184,8 @@ function find_decompressed_size(src::Vector{UInt8})
     GC.@preserve src find_decompressed_size(pointer(src), length(src))
 end
 function find_decompressed_size(src::Ptr, srcSize::Integer)
-    frameOffset = 0
-    decompressedSize = 0
+    frameOffset = Csize_t(0)
+    decompressedSize = Culonglong(0)
 
     while frameOffset < srcSize
         frameSrc = src + frameOffset
