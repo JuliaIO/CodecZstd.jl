@@ -199,7 +199,10 @@ function find_decompressed_size(src::Ptr, srcSize::Integer)
         if frameContentSize == ZSTD_CONTENTSIZE_ERROR
             return ZSTD_CONTENTSIZE_ERROR
         end
-        decompressedSize += frameContentSize
+        decompressedSize, overflow = Base.add_with_overflow(decompressedSize, frameContentSize)
+        if overflow
+            return ZSTD_CONTENTSIZE_ERROR
+        end
 
         # Advance the offset forward by the size of the compressed frame
         frameCompressedSize = LibZstd.ZSTD_findFrameCompressedSize(frameSrc, remainingSize)
