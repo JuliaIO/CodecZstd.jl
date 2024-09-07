@@ -101,13 +101,31 @@ function TranscodingStreams.finalize(codec::ZstdCompressor)
     return
 end
 
-function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
-    code = reset!(codec.cstream, 0 #=unknown source size=#)
+function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)::Symbol
+    code = reset!(codec.cstream)
     if iserror(code)
-        error[] = ErrorException("zstd error")
-        return :error
+        error[] = ErrorException("zstd error resetting compression context")
+        :error
+    else
+        :ok
     end
-    return :ok
+end
+
+if isdefined(TranscodingStreams, :pledgeinsize)
+    function TranscodingStreams.pledgeinsize(codec::ZstdCompressor, insize::Int64, error::Error)::Symbol
+        srcsize = if signbit(insize)
+            ZSTD_CONTENTSIZE_UNKNOWN
+        else
+            Culonglong(insize)
+        end
+        code = LibZstd.ZSTD_CCtx_setPledgedSrcSize(codec.cstream, srcsize)
+        if iserror(code)
+            error[] = ErrorException("zstd error setting pledged source size")
+            :error
+        else
+            :ok
+        end
+    end
 end
 
 function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, error::Error)
