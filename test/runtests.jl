@@ -90,5 +90,59 @@ Random.seed!(1234)
         @test transcode(ZstdDecompressor, buffer2) == data
     end
 
+    @testset "find_decompressed_size" begin
+        codec = ZstdFrameCompressor()
+        buffer1 = transcode(codec, "Hello")
+        buffer2 = transcode(codec, "World!")
+        @test CodecZstd.find_decompressed_size(buffer1) == 5
+        @test CodecZstd.find_decompressed_size(buffer2) == 6
+
+        iob = IOBuffer()
+        write(iob, buffer1)
+        write(iob, buffer2)
+        v = take!(iob)
+        @test CodecZstd.find_decompressed_size(v) == 11
+
+        write(iob, buffer1)
+        write(iob, buffer1)
+        write(iob, buffer1)
+        v = take!(iob)
+        @test CodecZstd.find_decompressed_size(v) == 15
+
+        write(iob, buffer1)
+        write(iob, buffer2)
+        write(iob, buffer1)
+        write(iob, buffer2)
+        v = take!(iob)
+        @test CodecZstd.find_decompressed_size(v) == 22
+
+        codec = ZstdCompressor()
+        buffer3 = transcode(codec, "Hello")
+        buffer4 = transcode(codec, "World!")
+        @test CodecZstd.find_decompressed_size(buffer3) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+        @test CodecZstd.find_decompressed_size(buffer4) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+
+        write(iob, buffer1)
+        write(iob, buffer2)
+        write(iob, buffer3)
+        write(iob, buffer4)
+        v = take!(iob)
+        GC.@preserve v begin
+            @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)) == 5
+            @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)+length(buffer2)) == 11
+            @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)+length(buffer2)-1) == CodecZstd.ZSTD_CONTENTSIZE_ERROR
+        end
+        @test CodecZstd.find_decompressed_size(v) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+
+        write(iob, buffer1)
+        write(iob, "George Washington")
+        v = take!(iob)
+        GC.@preserve v begin
+            @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)) == 5
+        end
+        @test CodecZstd.find_decompressed_size(v) == CodecZstd.ZSTD_CONTENTSIZE_ERROR
+    end
+
     include("compress_endOp.jl")
+    include("static_only_tests.jl")
 end

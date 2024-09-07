@@ -163,6 +163,59 @@ end
 const ZSTD_CONTENTSIZE_UNKNOWN = Culonglong(0) - 1
 const ZSTD_CONTENTSIZE_ERROR   = Culonglong(0) - 2
 
-function find_decompressed_size(src::Ptr, size::Integer)
-    return LibZstd.ZSTD_findDecompressedSize(src, size)
+"""
+    find_decompressed_size(src::Vector{UInt8})
+    find_decompressed_size(src::Ptr, srcSize::Integer)
+
+Find the decompressed size of a source buffer containing one or more frames.
+
+This function should act identically to `ZSTD_findFrameDecompressedSize` which
+is part of the static only API.
+
+Normally, this function should return the size in terms of bytes of all the frames
+decompressed.
+
+May return `ZSTD_CONTENTSIZE_UNKNOWN` or `ZSTD_CONTENTSIZE_ERROR`:
+1. Return a code above if `ZSTD_getFrameContentSize` returns the code.
+2. Return `ZSTD_CONTENTSIZE_ERROR` if `ZSTD_findFrameCompressedSize` errors.
+3. Return `ZSTD_CONTENTSIZE_ERROR` if the frame extends beyond `srcSize`
+"""
+function find_decompressed_size(src::Vector{UInt8})
+    GC.@preserve src find_decompressed_size(pointer(src), length(src))
+end
+function find_decompressed_size(src::Ptr, srcSize::Integer)
+    frameOffset = Csize_t(0)
+    decompressedSize = Culonglong(0)
+
+    while frameOffset < srcSize
+        frameSrc = src + frameOffset
+        remainingSize = srcSize - frameOffset
+
+        # Obtain the decompressed frame content size of the next frame, accumulate
+        frameContentSize = LibZstd.ZSTD_getFrameContentSize(frameSrc, remainingSize)
+        if frameContentSize == ZSTD_CONTENTSIZE_UNKNOWN
+            return ZSTD_CONTENTSIZE_UNKNOWN
+        end
+        if frameContentSize == ZSTD_CONTENTSIZE_ERROR
+            return ZSTD_CONTENTSIZE_ERROR
+        end
+        decompressedSize, overflow = Base.add_with_overflow(decompressedSize, frameContentSize)
+        if overflow
+            return ZSTD_CONTENTSIZE_ERROR
+        end
+
+        # Advance the offset forward by the size of the compressed frame
+        frameCompressedSize = LibZstd.ZSTD_findFrameCompressedSize(frameSrc, remainingSize)
+        if iserror(frameCompressedSize) || frameCompressedSize <= 0
+            return ZSTD_CONTENTSIZE_ERROR
+        end
+        frameOffset += frameCompressedSize
+    end
+
+    # frameOffset > srcSize
+    if frameOffset != srcSize
+        return ZSTD_CONTENTSIZE_ERROR
+    end
+
+    return decompressedSize
 end
