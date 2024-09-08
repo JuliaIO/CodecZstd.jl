@@ -1,7 +1,7 @@
 CodecZstd.jl
 ============
 
-[![codecov.io][codecov-img]][codecov-url]
+[![codecov](https://codecov.io/gh/JuliaIO/CodecZstd.jl/graph/badge.svg?token=CgSrhnEKdy)](https://codecov.io/gh/JuliaIO/CodecZstd.jl)
 
 ## Installation
 
@@ -47,6 +47,3 @@ This package exports following codecs and streams:
 Version 0.8.3 also introduced the virtual codec `ZstdFrameCompressor` which stores the decompressed content size in the frame header. Currently, `ZstdFrameCompressor` is an alternate constructor for `ZstdCompressor`, but that is an implementation detail which should not be relied upon.
 
 See docstrings and [TranscodingStreams.jl](https://github.com/JuliaIO/TranscodingStreams.jl) for details.
-
-[codecov-img]: http://codecov.io/github/JuliaIO/CodecZstd.jl/coverage.svg?branch=master
-[codecov-url]: http://codecov.io/github/JuliaIO/CodecZstd.jl?branch=master
