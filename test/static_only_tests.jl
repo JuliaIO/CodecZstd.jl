@@ -63,7 +63,7 @@ These tests use the static-only API to test `find_decompressed_size`
     @test CodecZstd.find_decompressed_size(v) == LibZstdStatic.ZSTD_findDecompressedSize(v)
 
     @testset "skippable frames" begin
-        skippable_frame = collect(b"P*M\x18\x04\0\0\0\r\0\0\0")
+        skippable_frame = create_skippable_frame(b"\r\0\0\0")
         @test CodecZstd.find_decompressed_size(skippable_frame) == LibZstdStatic.ZSTD_findDecompressedSize(skippable_frame)
         @test CodecZstd.find_decompressed_size(skippable_frame) == 0
         for d in 0:2

@@ -11,6 +11,8 @@ using Test
 
 Random.seed!(1234)
 
+include("utils.jl")
+
 @testset "Zstd Codec" begin
     codec = ZstdCompressor()
     @test codec isa ZstdCompressor
@@ -43,7 +45,7 @@ Random.seed!(1234)
     end
 
     @testset "skippable frames" begin
-        skippable_frame = collect(b"P*M\x18\x04\0\0\0\r\0\0\0")
+        skippable_frame = create_skippable_frame(b"\r\0\0\0")
         u1 = collect(b"")
         u2 = collect(b"Hello World!")
         c1 = transcode(ZstdCompressor, u1)
