@@ -42,6 +42,17 @@ Random.seed!(1234)
         end
     end
 
+    @testset "skippable frames" begin
+        skippable_frame = collect(b"P*M\x18\x04\0\0\0\r\0\0\0")
+        u1 = collect(b"")
+        u2 = collect(b"Hello World!")
+        c1 = transcode(ZstdCompressor, u1)
+        c2 = transcode(ZstdCompressor, u2)
+        @test transcode(ZstdDecompressor, skippable_frame) == UInt8[]
+        @test transcode(ZstdDecompressor, [skippable_frame; c1;]) == u1
+        @test transcode(ZstdDecompressor, [skippable_frame; c2;]) == u2
+    end
+
     @test ZstdCompressorStream <: TranscodingStreams.TranscodingStream
     @test ZstdDecompressorStream <: TranscodingStreams.TranscodingStream
 
@@ -91,9 +102,9 @@ Random.seed!(1234)
     end
 
     @testset "find_decompressed_size" begin
-        codec = ZstdFrameCompressor()
-        buffer1 = transcode(codec, "Hello")
-        buffer2 = transcode(codec, "World!")
+        codec = ZstdFrameCompressor
+        buffer1 = transcode(codec, b"Hello")
+        buffer2 = transcode(codec, b"World!")
         @test CodecZstd.find_decompressed_size(buffer1) == 5
         @test CodecZstd.find_decompressed_size(buffer2) == 6
 
@@ -116,9 +127,9 @@ Random.seed!(1234)
         v = take!(iob)
         @test CodecZstd.find_decompressed_size(v) == 22
 
-        codec = ZstdCompressor()
-        buffer3 = transcode(codec, "Hello")
-        buffer4 = transcode(codec, "World!")
+        codec = ZstdCompressor
+        buffer3 = transcode(codec, b"Hello")
+        buffer4 = transcode(codec, b"World!")
         @test CodecZstd.find_decompressed_size(buffer3) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
         @test CodecZstd.find_decompressed_size(buffer4) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
 
