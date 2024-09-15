@@ -48,7 +48,13 @@ mutable struct CStream
         if ptr == C_NULL
             throw(OutOfMemoryError())
         end
-        return new(ptr, InBuffer(), OutBuffer())
+        cstream = new(ptr, InBuffer(), OutBuffer())
+        finalizer(cstream) do x
+            local p = x.ptr
+            x.ptr = C_NULL
+            LibZstd.ZSTD_freeCStream(p)
+            nothing
+        end
     end
 end
 

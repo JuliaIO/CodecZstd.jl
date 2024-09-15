@@ -5,6 +5,16 @@ struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
     level::Int
     endOp::LibZstd.ZSTD_EndDirective
+
+    # Unexported inner constructor of ZstdCompressor
+    global function private_ZstdCompressor(level::Int, endOp::LibZstd.ZSTD_EndDirective)
+        local cstream = CStream()
+        local code = initialize!(cstream, level)
+        if iserror(code)
+            zstderror(cstream, code)
+        end
+        new(cstream, level, endOp)
+    end
 end
 
 function Base.show(io::IO, codec::ZstdCompressor)
@@ -31,9 +41,8 @@ function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     if !(1 ≤ level ≤ MAX_CLEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
-    return ZstdCompressor(CStream(), level)
+    return private_ZstdCompressor(Int(level), LibZstd.ZSTD_e_continue)
 end
-ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, :continue)
 
 """
    ZstdFrameCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
@@ -49,17 +58,11 @@ function ZstdFrameCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
     if !(1 ≤ level ≤ MAX_CLEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
-    return ZstdCompressor(CStream(), level, :end)
+    return private_ZstdCompressor(Int(level), LibZstd.ZSTD_e_end)
 end
 # pretend that ZstdFrameCompressor is a compressor type
 function TranscodingStreams.transcode(C::typeof(ZstdFrameCompressor), args...)
-    codec = C()
-    initialize(codec)
-    try
-        return transcode(codec, args...)
-    finally
-        finalize(codec)
-    end
+    transcode(C(), args...)
 end
 
 const ZstdCompressorStream{S} = TranscodingStream{ZstdCompressor,S} where S<:IO
@@ -77,29 +80,6 @@ end
 
 # Methods
 # -------
-
-function TranscodingStreams.initialize(codec::ZstdCompressor)
-    code = initialize!(codec.cstream, codec.level)
-    if iserror(code)
-        zstderror(codec.cstream, code)
-    end
-    reset!(codec.cstream.ibuffer)
-    reset!(codec.cstream.obuffer)
-    return
-end
-
-function TranscodingStreams.finalize(codec::ZstdCompressor)
-    if codec.cstream.ptr != C_NULL
-        code = free!(codec.cstream)
-        if iserror(code)
-            zstderror(codec.cstream, code)
-        end
-        codec.cstream.ptr = C_NULL
-    end
-    reset!(codec.cstream.ibuffer)
-    reset!(codec.cstream.obuffer)
-    return
-end
 
 function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
     code = reset!(codec.cstream, 0 #=unknown source size=#)
