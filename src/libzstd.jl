@@ -36,19 +36,56 @@ function reset!(buf::OutBuffer)
     buf.size = 0
 end
 
+# These are part of the static API, but are required to prevent being killed by OOM
+# typedef void * ( * ZSTD_allocFunction ) ( void * opaque , size_t size )
+const ZSTD_allocFunction = Ptr{Cvoid}
+
+# typedef void ( * ZSTD_freeFunction ) ( void * opaque , void * address )
+const ZSTD_freeFunction = Ptr{Cvoid}
+
+struct ZSTD_customMem
+    customAlloc::ZSTD_allocFunction
+    customFree::ZSTD_freeFunction
+    opaque::Ptr{Cvoid}
+end
+
+function zstd_custom_alloc(opaque::Ptr{Cvoid}, size::Csize_t)
+    ccall(:jl_malloc, Ptr{Cvoid}, (Csize_t,), size)
+end
+
+function zstd_custom_free(opaque::Ptr{Cvoid}, address::Ptr{Cvoid})
+    ccall(:jl_free, Cvoid, (Ptr{Cvoid},), address)
+end
 
 # ZSTD_CStream
 mutable struct CStream
-    ptr::Ptr{LibZstd.ZSTD_CStream}
+    @atomic ptr::Ptr{LibZstd.ZSTD_CStream}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
     function CStream()
-        ptr = LibZstd.ZSTD_createCStream()
+        default_custom_mem = ZSTD_customMem(
+            @cfunction(zstd_custom_alloc, Ptr{Cvoid}, (Ptr{Cvoid}, Csize_t)),
+            @cfunction(zstd_custom_free, Cvoid, (Ptr{Cvoid}, Ptr{Cvoid})),
+            C_NULL,
+        )
+        ptr = ccall(
+            (:ZSTD_createCStream_advanced, libzstd),
+            Ptr{LibZstd.ZSTD_CStream},
+            (ZSTD_customMem,),
+            default_custom_mem
+        )
         if ptr == C_NULL
             throw(OutOfMemoryError())
         end
-        return new(ptr, InBuffer(), OutBuffer())
+        cstream = new(ptr, InBuffer(), OutBuffer())
+        finalizer(cstream) do x
+            local p = @atomicswap x.ptr = C_NULL
+            # no need to check if p is already C_NULL 
+            # because ZSTD_freeCStream will handle that.
+            LibZstd.ZSTD_freeCStream(p)
+            nothing
+        end
     end
 end
 
