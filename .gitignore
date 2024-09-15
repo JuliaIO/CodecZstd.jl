@@ -2,13 +2,13 @@
 *.jl.*.cov
 *.jl.mem
 /Manifest.toml
-/deps/build.log
-/deps/deps.jl
-/deps/usr/
 src/libzstd/LibTemplate.jl
 src/libzstd/ctypes.jl
 /github/
 settings.json
+**/*.json
+**/*.json.tmp
+benchmark/Manifest.toml
 dictionary
 github_users_sample_set.tar
 github_users_sample_set.tar.zst
