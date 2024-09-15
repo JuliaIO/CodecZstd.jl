@@ -34,6 +34,9 @@ end
 # -------
 
 function TranscodingStreams.initialize(codec::ZstdDecompressor)
+    if codec.dstream.ptr == C_NULL
+        error("codec use after free")
+    end
     code = initialize!(codec.dstream)
     if iserror(code)
         zstderror(codec.dstream, code)
@@ -57,6 +60,9 @@ function TranscodingStreams.finalize(codec::ZstdDecompressor)
 end
 
 function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, error::Error)
+    if codec.dstream.ptr == C_NULL
+        error("codec use after free")
+    end
     code = reset!(codec.dstream)
     if iserror(code)
         error[] = ErrorException("zstd error")
@@ -66,6 +72,9 @@ function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, err
 end
 
 function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, output::Memory, error::Error)
+    if codec.dstream.ptr == C_NULL
+        error("codec use after free")
+    end
     dstream = codec.dstream
     dstream.ibuffer.src = input.ptr
     dstream.ibuffer.size = input.size
