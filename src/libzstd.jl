@@ -59,7 +59,7 @@ end
 
 # ZSTD_CStream
 mutable struct CStream
-    ptr::Ptr{LibZstd.ZSTD_CStream}
+    @atomic ptr::Ptr{LibZstd.ZSTD_CStream}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
@@ -80,8 +80,9 @@ mutable struct CStream
         end
         cstream = new(ptr, InBuffer(), OutBuffer())
         finalizer(cstream) do x
-            local p = x.ptr
-            x.ptr = C_NULL
+            local p = @atomicswap x.ptr = C_NULL
+            # no need to check if p is already C_NULL 
+            # because ZSTD_freeCStream will handle that.
             LibZstd.ZSTD_freeCStream(p)
             nothing
         end

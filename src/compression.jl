@@ -81,6 +81,15 @@ end
 # Methods
 # -------
 
+function TranscodingStreams.finalize(codec::ZstdCompressor)
+    cstream = codec.cstream
+    p = @atomicswap cstream.ptr = C_NULL
+    # no need to check if p is already C_NULL 
+    # because ZSTD_freeCStream will handle that.
+    LibZstd.ZSTD_freeCStream(p)
+    return
+end
+
 function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
     code = reset!(codec.cstream, 0 #=unknown source size=#)
     if iserror(code)
