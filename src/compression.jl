@@ -3,15 +3,28 @@
 
 struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
-    level::Int
     endOp::LibZstd.ZSTD_EndDirective
+    parameters::Dict{LibZstd.ZSTD_cParameter, Cint}
+    function ZstdCompressor(cstream, level, endOp=:continue; kwargs...)
+        _parameters = Dict{LibZstd.ZSTD_cParameter, Cint}(LibZstd.ZSTD_c_compressionLevel => level)
+        for (k,v) in kwargs
+            _parameters[_symbols_to_cParameters[k]] = v
+        end
+        return new(cstream, endOp, _parameters)
+    end
 end
 
 function Base.show(io::IO, codec::ZstdCompressor)
+    parameters_string = ""
+    for (k,v) in codec.parameters
+        if k != LibZstd.ZSTD_c_compressionLevel
+            parameters_string *= string(", ", replace(string(k), "ZSTD_c_" => ""), "=", v)
+        end
+    end
     if codec.endOp == LibZstd.ZSTD_e_end
-        print(io, "ZstdFrameCompressor(level=$(codec.level))")
+        print(io, "ZstdFrameCompressor(level=$(codec.level)$parameters_string)")
     else
-        print(io, summary(codec), "(level=$(codec.level))")
+        print(io, summary(codec), "(level=$(codec.level)$parameters_string)")
     end
 end
 
@@ -27,13 +40,59 @@ Arguments
 ---------
 - `level`: compression level (1..$(MAX_CLEVEL))
 """
-function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
+function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL, kwargs...)
     if !(1 ≤ level ≤ MAX_CLEVEL)
         throw(ArgumentError("level must be within 1..$(MAX_CLEVEL)"))
     end
-    return ZstdCompressor(CStream(), level)
+    return ZstdCompressor(CStream(), level; kwargs...)
 end
-ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, :continue)
+
+const _symbols_to_cParameters = Dict(
+    :compressionLevel => LibZstd.ZSTD_c_compressionLevel,
+    :windowLog => LibZstd.ZSTD_c_windowLog,
+    :hashLog => LibZstd.ZSTD_c_hashLog,
+    :chainLog => LibZstd.ZSTD_c_chainLog,
+    :searchLog => LibZstd.ZSTD_c_searchLog,
+    :minMatch => LibZstd.ZSTD_c_minMatch,
+    :targetLength => LibZstd.ZSTD_c_targetLength,
+    :strategy => LibZstd.ZSTD_c_strategy,
+    :enableLongDistanceMatching => LibZstd.ZSTD_c_enableLongDistanceMatching,
+    :ldmHashLog => LibZstd.ZSTD_c_ldmHashLog,
+    :ldmMinMatch => LibZstd.ZSTD_c_ldmMinMatch,
+    :ldmBucketSizeLog => LibZstd.ZSTD_c_ldmBucketSizeLog,
+    :ldmHashRateLog => LibZstd.ZSTD_c_ldmHashRateLog,
+    :contentSizeFlag => LibZstd.ZSTD_c_contentSizeFlag,
+    :checksumFlag => LibZstd.ZSTD_c_checksumFlag,
+    :dictIDFlag => LibZstd.ZSTD_c_dictIDFlag,
+    :nbWorkers => LibZstd.ZSTD_c_nbWorkers,
+    :jobSize => LibZstd.ZSTD_c_jobSize,
+    :overlapLog => LibZstd.ZSTD_c_overlapLog
+)
+
+function Base.propertynames(compressor::ZstdCompressor)
+    return (fieldnames(ZstdCompressor)..., keys(_symbols_to_cParameters)...)
+end
+
+function Base.getproperty(compressor::ZstdCompressor, name::Symbol)
+    if name == :level
+        return Int(get(compressor.parameters, LibZstd.ZSTD_c_compressionLevel, DEFAULT_COMPRESSION_LEVEL))
+    elseif haskey(_symbols_to_cParameters, name)
+        return compressor.parameters[_symbols_to_cParameters[name]]
+    else
+        return getfield(compressor, name)
+    end
+end
+
+function Base.setproperty!(compressor::ZstdCompressor, name::Symbol, value)
+    if name == :level
+        compressor.parameters[LibZstd.ZSTD_c_compressionLevel] = value
+    elseif haskey(_symbols_to_cParameters, name)
+        compressor.parameters[_symbols_to_cParameters[name]] = value
+    else
+        return setfield!(compressor, name, value)
+    end
+    return nothing
+end
 
 """
    ZstdFrameCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
