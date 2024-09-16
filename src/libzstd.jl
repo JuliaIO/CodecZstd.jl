@@ -44,11 +44,7 @@ mutable struct CStream
     obuffer::OutBuffer
 
     function CStream()
-        ptr = LibZstd.ZSTD_createCStream()
-        if ptr == C_NULL
-            throw(OutOfMemoryError())
-        end
-        return new(ptr, InBuffer(), OutBuffer())
+        return new(C_NULL, InBuffer(), OutBuffer())
     end
 end
 

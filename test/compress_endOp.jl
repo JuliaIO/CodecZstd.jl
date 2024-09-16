@@ -4,6 +4,7 @@ using Test
 @testset "compress! endOp = :continue" begin
     data = rand(1:100, 1024*1024)
     cstream = CodecZstd.CStream()
+    cstream.ptr = CodecZstd.LibZstd.ZSTD_createCStream()
     cstream.ibuffer.src = pointer(data)
     cstream.ibuffer.size = sizeof(data)
     cstream.ibuffer.pos = 0
@@ -24,6 +25,7 @@ end
 @testset "compress! endOp = :flush" begin
     data = rand(1:100, 1024*1024)
     cstream = CodecZstd.CStream()
+    cstream.ptr = CodecZstd.LibZstd.ZSTD_createCStream()
     cstream.ibuffer.src = pointer(data)
     cstream.ibuffer.size = sizeof(data)
     cstream.ibuffer.pos = 0
@@ -43,6 +45,7 @@ end
 @testset "compress! endOp = :end" begin
     data = rand(1:100, 1024*1024)
     cstream = CodecZstd.CStream()
+    cstream.ptr = CodecZstd.LibZstd.ZSTD_createCStream()
     cstream.ibuffer.src = pointer(data)
     cstream.ibuffer.size = sizeof(data)
     cstream.ibuffer.pos = 0
