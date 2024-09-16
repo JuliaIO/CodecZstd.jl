@@ -156,6 +156,41 @@ include("utils.jl")
         @test CodecZstd.find_decompressed_size(v) == CodecZstd.ZSTD_CONTENTSIZE_ERROR
     end
 
+    @testset "use after free doesn't segfault" begin
+        @testset "$(Codec)" for Codec in (ZstdCompressor, ZstdDecompressor)
+            codec = Codec()
+            TranscodingStreams.initialize(codec)
+            TranscodingStreams.finalize(codec)
+            data = [0x00,0x01]
+            GC.@preserve data let m = TranscodingStreams.Memory(pointer(data), length(data))
+                try
+                    TranscodingStreams.expectedsize(codec, m)
+                catch
+                end
+                try
+                    TranscodingStreams.minoutsize(codec, m)
+                catch
+                end
+                try
+                    TranscodingStreams.initialize(codec)
+                catch
+                end
+                try
+                    TranscodingStreams.startproc(codec, :read, TranscodingStreams.Error())
+                catch
+                end
+                try
+                    TranscodingStreams.process(codec, m, m, TranscodingStreams.Error())
+                catch
+                end
+                try
+                    TranscodingStreams.finalize(codec)
+                catch
+                end
+            end
+        end
+    end
+
     include("compress_endOp.jl")
     include("static_only_tests.jl")
 end
