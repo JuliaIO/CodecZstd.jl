@@ -56,8 +56,26 @@ Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_CStream}}, cstream::CStream) = cstre
 Base.unsafe_convert(::Type{Ptr{InBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{InBuffer}, cstream.ibuffer)
 Base.unsafe_convert(::Type{Ptr{OutBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{OutBuffer}, cstream.obuffer)
 
-function initialize!(cstream::CStream, level::Integer)
-    return LibZstd.ZSTD_initCStream(cstream, level)
+function initialize!(cstream::CStream, parameters::Dict{LibZstd.ZSTD_cParameter, Cint})
+    # Mimick ZSTD_initCStream
+    # https://github.com/facebook/zstd/blob/20707e3718ee14250fb8a44b3bf023ea36bd88df/lib/zstd.h#L832-L841
+    code = LibZstd.ZSTD_CCtx_reset(cstream, LibZstd.ZSTD_reset_session_only)
+    if iserror(code)
+        zstderror(cstream, code)
+    end
+
+    code = LibZstd.ZSTD_CCtx_refCDict(cstream, C_NULL)
+    if iserror(code)
+        zstderror(cstream, code)
+    end
+
+    for (k,v) in parameters
+        code = LibZstd.ZSTD_CCtx_setParameter(cstream, k, v)
+        if iserror(code)
+            zstderror(cstream, code)
+        end
+    end
+    return Csize_t(0)
 end
 
 function reset!(cstream::CStream, srcsize::Integer)
