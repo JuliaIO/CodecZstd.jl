@@ -123,11 +123,7 @@ mutable struct DStream
     obuffer::OutBuffer
 
     function DStream()
-        ptr = LibZstd.ZSTD_createDStream()
-        if ptr == C_NULL
-            throw(OutOfMemoryError())
-        end
-        return new(ptr, InBuffer(), OutBuffer())
+        return new(C_NULL, InBuffer(), OutBuffer())
     end
 end
 Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DStream}}, dstream::DStream) = dstream.ptr
