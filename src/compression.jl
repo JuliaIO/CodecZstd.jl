@@ -138,7 +138,7 @@ end
 # -------
 
 function TranscodingStreams.initialize(codec::ZstdCompressor)
-    code = initialize!(codec.cstream, codec.level)
+    code = initialize!(codec.cstream, codec.parameters)
     if iserror(code)
         zstderror(codec.cstream, code)
     end
