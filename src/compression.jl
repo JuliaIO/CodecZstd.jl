@@ -86,7 +86,7 @@ function TranscodingStreams.finalize(codec::ZstdCompressor)
         end
         codec.cstream.ptr = C_NULL
     end
-    nothing
+    return
 end
 
 function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
