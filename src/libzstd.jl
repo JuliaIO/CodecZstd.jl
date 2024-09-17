@@ -137,6 +137,8 @@ end
 function reset!(dstream::DStream)
     # LibZstd.ZSTD_resetDStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2332-L2339
+    reset!(dstream.ibuffer)
+    reset!(dstream.obuffer)
     return LibZstd.ZSTD_DCtx_reset(dstream, LibZstd.ZSTD_reset_session_only)
 end
 
