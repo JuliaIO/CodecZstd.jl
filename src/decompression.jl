@@ -46,11 +46,10 @@ end
 
 function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, error::Error)
     if codec.dstream.ptr == C_NULL
-        ptr = LibZstd.ZSTD_createDStream()
-        if ptr == C_NULL
+        codec.dstream.ptr = LibZstd.ZSTD_createDStream()
+        if codec.dstream.ptr == C_NULL
             throw(OutOfMemoryError())
         end
-        codec.dstream.ptr = ptr
         i_code = initialize!(codec.dstream)
         if iserror(i_code)
             error[] = ErrorException("zstd initialization error")
