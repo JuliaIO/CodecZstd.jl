@@ -158,4 +158,72 @@ include("utils.jl")
 
     include("compress_endOp.jl")
     include("static_only_tests.jl")
+
+    @testset "reusing a compressor" begin
+        compressor = ZstdCompressor()
+        x = rand(UInt8, 1000)
+        TranscodingStreams.initialize(compressor)
+        ret1 = transcode(compressor, x)
+        TranscodingStreams.finalize(compressor)
+
+        # compress again using the same compressor
+        TranscodingStreams.initialize(compressor) # segfault happens here!
+        ret2 = transcode(compressor, x)
+        ret3 = transcode(compressor, x)
+        TranscodingStreams.finalize(compressor)
+
+        @test transcode(ZstdDecompressor, ret1) == x
+        @test transcode(ZstdDecompressor, ret2) == x
+        @test transcode(ZstdDecompressor, ret3) == x
+        @test ret1 == ret2
+        @test ret1 == ret3
+
+        decompressor = ZstdDecompressor()
+        TranscodingStreams.initialize(decompressor)
+        @test transcode(decompressor, ret1) == x
+        TranscodingStreams.finalize(decompressor)
+
+        TranscodingStreams.initialize(decompressor)
+        @test transcode(decompressor, ret1) == x
+        TranscodingStreams.finalize(decompressor)
+    end
+
+    @testset "use after free doesn't segfault" begin
+        @testset "$(Codec)" for Codec in (ZstdCompressor, ZstdDecompressor)
+            codec = Codec()
+            TranscodingStreams.initialize(codec)
+            TranscodingStreams.finalize(codec)
+            data = [0x00,0x01]
+            GC.@preserve data let m = TranscodingStreams.Memory(pointer(data), length(data))
+                try
+                    TranscodingStreams.expectedsize(codec, m)
+                catch
+                end
+                try
+                    TranscodingStreams.minoutsize(codec, m)
+                catch
+                end
+                try
+                    TranscodingStreams.initialize(codec)
+                catch
+                end
+                try
+                    TranscodingStreams.process(codec, m, m, TranscodingStreams.Error())
+                catch
+                end
+                try
+                    TranscodingStreams.startproc(codec, :read, TranscodingStreams.Error())
+                catch
+                end
+                try
+                    TranscodingStreams.process(codec, m, m, TranscodingStreams.Error())
+                catch
+                end
+                try
+                    TranscodingStreams.finalize(codec)
+                catch
+                end
+            end
+        end
+    end
 end

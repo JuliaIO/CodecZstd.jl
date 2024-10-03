@@ -33,16 +33,6 @@ end
 # Methods
 # -------
 
-function TranscodingStreams.initialize(codec::ZstdDecompressor)
-    code = initialize!(codec.dstream)
-    if iserror(code)
-        zstderror(codec.dstream, code)
-    end
-    reset!(codec.dstream.ibuffer)
-    reset!(codec.dstream.obuffer)
-    return
-end
-
 function TranscodingStreams.finalize(codec::ZstdDecompressor)
     if codec.dstream.ptr != C_NULL
         code = free!(codec.dstream)
@@ -51,12 +41,21 @@ function TranscodingStreams.finalize(codec::ZstdDecompressor)
         end
         codec.dstream.ptr = C_NULL
     end
-    reset!(codec.dstream.ibuffer)
-    reset!(codec.dstream.obuffer)
     return
 end
 
 function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, error::Error)
+    if codec.dstream.ptr == C_NULL
+        codec.dstream.ptr = LibZstd.ZSTD_createDStream()
+        if codec.dstream.ptr == C_NULL
+            throw(OutOfMemoryError())
+        end
+        i_code = initialize!(codec.dstream)
+        if iserror(i_code)
+            error[] = ErrorException("zstd initialization error")
+            return :error
+        end
+    end
     code = reset!(codec.dstream)
     if iserror(code)
         error[] = ErrorException("zstd error")
@@ -66,6 +65,9 @@ function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, err
 end
 
 function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, output::Memory, error::Error)
+    if codec.dstream.ptr == C_NULL
+        error("startproc must be called before process")
+    end
     dstream = codec.dstream
     dstream.ibuffer.src = input.ptr
     dstream.ibuffer.size = input.size
