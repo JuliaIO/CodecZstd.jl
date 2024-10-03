@@ -44,11 +44,7 @@ mutable struct CStream
     obuffer::OutBuffer
 
     function CStream()
-        ptr = LibZstd.ZSTD_createCStream()
-        if ptr == C_NULL
-            throw(OutOfMemoryError())
-        end
-        return new(ptr, InBuffer(), OutBuffer())
+        return new(C_NULL, InBuffer(), OutBuffer())
     end
 end
 
@@ -115,11 +111,7 @@ mutable struct DStream
     obuffer::OutBuffer
 
     function DStream()
-        ptr = LibZstd.ZSTD_createDStream()
-        if ptr == C_NULL
-            throw(OutOfMemoryError())
-        end
-        return new(ptr, InBuffer(), OutBuffer())
+        return new(C_NULL, InBuffer(), OutBuffer())
     end
 end
 Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DStream}}, dstream::DStream) = dstream.ptr
@@ -133,6 +125,8 @@ end
 function reset!(dstream::DStream)
     # LibZstd.ZSTD_resetDStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2332-L2339
+    reset!(dstream.ibuffer)
+    reset!(dstream.obuffer)
     return LibZstd.ZSTD_DCtx_reset(dstream, LibZstd.ZSTD_reset_session_only)
 end
 

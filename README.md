@@ -1,7 +1,7 @@
 CodecZstd.jl
 ============
 
-[![codecov.io][codecov-img]][codecov-url]
+[![codecov](https://codecov.io/gh/JuliaIO/CodecZstd.jl/graph/badge.svg?token=CgSrhnEKdy)](https://codecov.io/gh/JuliaIO/CodecZstd.jl)
 
 ## Installation
 
@@ -46,11 +46,4 @@ This package exports following codecs and streams:
 
 Version 0.8.3 also introduced the virtual codec `ZstdFrameCompressor` which stores the decompressed content size in the frame header. Currently, `ZstdFrameCompressor` is an alternate constructor for `ZstdCompressor`, but that is an implementation detail which should not be relied upon.
 
-See docstrings and [TranscodingStreams.jl](https://github.com/bicycle1885/TranscodingStreams.jl) for details.
-
-[travisci-img]: https://travis-ci.org/bicycle1885/CodecZstd.jl.svg?branch=master
-[travisci-url]: https://travis-ci.org/bicycle1885/CodecZstd.jl
-[appveyor-img]: https://ci.appveyor.com/api/projects/status/u58v32yenqf19x2a?svg=true
-[appveyor-url]: https://ci.appveyor.com/project/bicycle1885/codeczstd-jl
-[codecov-img]: http://codecov.io/github/bicycle1885/CodecZstd.jl/coverage.svg?branch=master
-[codecov-url]: http://codecov.io/github/bicycle1885/CodecZstd.jl?branch=master
+See docstrings and [TranscodingStreams.jl](https://github.com/JuliaIO/TranscodingStreams.jl) for details.

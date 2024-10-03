@@ -78,16 +78,6 @@ end
 # Methods
 # -------
 
-function TranscodingStreams.initialize(codec::ZstdCompressor)
-    code = initialize!(codec.cstream, codec.level)
-    if iserror(code)
-        zstderror(codec.cstream, code)
-    end
-    reset!(codec.cstream.ibuffer)
-    reset!(codec.cstream.obuffer)
-    return
-end
-
 function TranscodingStreams.finalize(codec::ZstdCompressor)
     if codec.cstream.ptr != C_NULL
         code = free!(codec.cstream)
@@ -96,12 +86,21 @@ function TranscodingStreams.finalize(codec::ZstdCompressor)
         end
         codec.cstream.ptr = C_NULL
     end
-    reset!(codec.cstream.ibuffer)
-    reset!(codec.cstream.obuffer)
     return
 end
 
-function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)::Symbol
+function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error::Error)
+    if codec.cstream.ptr == C_NULL
+        codec.cstream.ptr = LibZstd.ZSTD_createCStream()
+        if codec.cstream.ptr == C_NULL
+            throw(OutOfMemoryError())
+        end
+        i_code = initialize!(codec.cstream, codec.level)
+        if iserror(i_code)
+            error[] = ErrorException("zstd initialization error")
+            return :error
+        end
+    end
     code = reset!(codec.cstream)
     if iserror(code)
         error[] = ErrorException("zstd error resetting compression context")
@@ -129,6 +128,9 @@ if isdefined(TranscodingStreams, :pledgeinsize)
 end
 
 function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, error::Error)
+    if codec.cstream.ptr == C_NULL
+        error("startproc must be called before process")
+    end
     cstream = codec.cstream
     ibuffer_starting_pos = UInt(0)
     if codec.endOp == LibZstd.ZSTD_e_end &&

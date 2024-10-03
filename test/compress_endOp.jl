@@ -3,27 +3,29 @@ using Test
 
 @testset "compress! endOp = :continue" begin
     data = rand(1:100, 1024*1024)
-    cstream = CodecZstd.CStream()
-    cstream.ibuffer.src = pointer(data)
-    cstream.ibuffer.size = sizeof(data)
-    cstream.ibuffer.pos = 0
-    cstream.obuffer.dst = Base.Libc.malloc(sizeof(data)*2)
-    cstream.obuffer.size = sizeof(data)*2
-    cstream.obuffer.pos = 0
-    try
-        GC.@preserve data begin
+    GC.@preserve data begin
+        cstream = CodecZstd.CStream()
+        cstream.ptr = CodecZstd.LibZstd.ZSTD_createCStream()
+        cstream.ibuffer.src = pointer(data)
+        cstream.ibuffer.size = sizeof(data)
+        cstream.ibuffer.pos = 0
+        cstream.obuffer.dst = Base.Libc.malloc(sizeof(data)*2)
+        cstream.obuffer.size = sizeof(data)*2
+        cstream.obuffer.pos = 0
+        try
             # default endOp
             @test CodecZstd.compress!(cstream; endOp=:continue) == 0
             @test CodecZstd.find_decompressed_size(cstream.obuffer.dst, cstream.obuffer.pos) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+        finally
+            Base.Libc.free(cstream.obuffer.dst)
         end
-    finally
-        Base.Libc.free(cstream.obuffer.dst)
     end
 end
 
 @testset "compress! endOp = :flush" begin
     data = rand(1:100, 1024*1024)
     cstream = CodecZstd.CStream()
+    cstream.ptr = CodecZstd.LibZstd.ZSTD_createCStream()
     cstream.ibuffer.src = pointer(data)
     cstream.ibuffer.size = sizeof(data)
     cstream.ibuffer.pos = 0
@@ -43,6 +45,7 @@ end
 @testset "compress! endOp = :end" begin
     data = rand(1:100, 1024*1024)
     cstream = CodecZstd.CStream()
+    cstream.ptr = CodecZstd.LibZstd.ZSTD_createCStream()
     cstream.ibuffer.src = pointer(data)
     cstream.ibuffer.size = sizeof(data)
     cstream.ibuffer.pos = 0
