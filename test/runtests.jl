@@ -168,13 +168,47 @@ include("utils.jl")
         if isdefined(TranscodingStreams, :pledgeinsize)
             # when pledgeinsize is available transcode should save the 
             # decompressed size in a header
-            for n in [0:30; 1000; 1000000; 10000000;]
-                a = transcode(ZstdCompressor, rand(UInt8, n))
-                @test CodecZstd.find_decompressed_size(a) == n
-                a = transcode(ZstdCompressor, rand(0x00:0x01, n))
-                @test CodecZstd.find_decompressed_size(a) == n
-                a = transcode(ZstdCompressor, zeros(UInt8, n))
-                @test CodecZstd.find_decompressed_size(a) == n
+            for n in [0:30; 1000; 1000000;]
+                v = transcode(ZstdCompressor, rand(UInt8, n))
+                @test CodecZstd.find_decompressed_size(v) == n
+            end
+
+            # Test what happens if pledgeinsize promise is broken
+            d1 = zeros(UInt8, 10000)
+            d2 = zeros(UInt8, 10000)
+            GC.@preserve d1 d2 begin
+                @testset "too many bytes" begin
+                    m1 = TranscodingStreams.Memory(pointer(d1), 1000)
+                    m2 = TranscodingStreams.Memory(pointer(d2), 1000)
+                    codec = ZstdCompressor()
+                    e = TranscodingStreams.Error()
+                    @test TranscodingStreams.startproc(codec, :read, e) === :ok
+                    @test TranscodingStreams.pledgeinsize(codec, 10, e) === :ok
+                    @test TranscodingStreams.process(codec, m1, m2, e) === (0, 0, :error)
+                    @test e[] == ErrorException("zstd error: Src size is incorrect")
+                end
+                @testset "too few bytes" begin
+                    m1 = TranscodingStreams.Memory(pointer(d1), 10)
+                    m2 = TranscodingStreams.Memory(pointer(d2), 1000)
+                    codec = ZstdCompressor()
+                    e = TranscodingStreams.Error()
+                    @test TranscodingStreams.startproc(codec, :read, e) === :ok
+                    @test TranscodingStreams.pledgeinsize(codec, 10000, e) === :ok
+                    @test TranscodingStreams.process(codec, m1, m2, e)[3] === :ok
+                    m1 = TranscodingStreams.Memory(pointer(d1), 0)
+                    @test TranscodingStreams.process(codec, m1, m2, e)[3] === :error
+                    @test e[] == ErrorException("zstd error: Src size is incorrect")
+                end
+                @testset "set pledgeinsize after process" begin
+                    m1 = TranscodingStreams.Memory(pointer(d1), 1000)
+                    m2 = TranscodingStreams.Memory(pointer(d2), 1000)
+                    codec = ZstdCompressor()
+                    e = TranscodingStreams.Error()
+                    @test TranscodingStreams.startproc(codec, :read, e) === :ok
+                    @test TranscodingStreams.process(codec, m1, m2, e)[3] === :ok
+                    @test TranscodingStreams.pledgeinsize(codec, 10000, e) === :error
+                    @test e[] == ErrorException("zstd error setting pledged source size")
+                end
             end
         end
     end
@@ -218,6 +252,12 @@ include("utils.jl")
             TranscodingStreams.finalize(codec)
             data = [0x00,0x01]
             GC.@preserve data let m = TranscodingStreams.Memory(pointer(data), length(data))
+                if isdefined(TranscodingStreams, :pledgeinsize)
+                    try
+                        TranscodingStreams.pledgeinsize(codec, 10, TranscodingStreams.Error())
+                    catch
+                    end
+                end
                 try
                     TranscodingStreams.expectedsize(codec, m)
                 catch

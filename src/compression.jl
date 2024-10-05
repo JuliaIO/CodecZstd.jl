@@ -112,6 +112,9 @@ end
 
 if isdefined(TranscodingStreams, :pledgeinsize)
     function TranscodingStreams.pledgeinsize(codec::ZstdCompressor, insize::Int64, error::Error)::Symbol
+        if codec.cstream.ptr == C_NULL
+            Base.error("`startproc` must be called before `pledgeinsize`")
+        end
         srcsize = if signbit(insize)
             ZSTD_CONTENTSIZE_UNKNOWN
         else
@@ -129,7 +132,7 @@ end
 
 function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, error::Error)
     if codec.cstream.ptr == C_NULL
-        error("startproc must be called before process")
+        Base.error("`startproc` must be called before `process`")
     end
     cstream = codec.cstream
     ibuffer_starting_pos = UInt(0)
