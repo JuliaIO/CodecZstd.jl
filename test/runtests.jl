@@ -183,7 +183,7 @@ include("utils.jl")
                     codec = ZstdCompressor()
                     e = TranscodingStreams.Error()
                     @test TranscodingStreams.startproc(codec, :read, e) === :ok
-                    @test TranscodingStreams.pledgeinsize(codec, 10, e) === :ok
+                    @test TranscodingStreams.pledgeinsize(codec, Int64(10), e) === :ok
                     @test TranscodingStreams.process(codec, m1, m2, e) === (0, 0, :error)
                     @test e[] == ErrorException("zstd error: Src size is incorrect")
                     TranscodingStreams.finalize(codec)
@@ -194,7 +194,7 @@ include("utils.jl")
                     codec = ZstdCompressor()
                     e = TranscodingStreams.Error()
                     @test TranscodingStreams.startproc(codec, :read, e) === :ok
-                    @test TranscodingStreams.pledgeinsize(codec, 10000, e) === :ok
+                    @test TranscodingStreams.pledgeinsize(codec, Int64(10000), e) === :ok
                     @test TranscodingStreams.process(codec, m1, m2, e)[3] === :ok
                     m1 = TranscodingStreams.Memory(pointer(d1), 0)
                     @test TranscodingStreams.process(codec, m1, m2, e)[3] === :error
@@ -208,7 +208,7 @@ include("utils.jl")
                     e = TranscodingStreams.Error()
                     @test TranscodingStreams.startproc(codec, :read, e) === :ok
                     @test TranscodingStreams.process(codec, m1, m2, e)[3] === :ok
-                    @test TranscodingStreams.pledgeinsize(codec, 10000, e) === :error
+                    @test TranscodingStreams.pledgeinsize(codec, Int64(10000), e) === :error
                     @test e[] == ErrorException("zstd error setting pledged source size")
                     TranscodingStreams.finalize(codec)
                 end
@@ -218,7 +218,7 @@ include("utils.jl")
                     codec = ZstdCompressor()
                     e = TranscodingStreams.Error()
                     @test TranscodingStreams.startproc(codec, :read, e) === :ok
-                    @test TranscodingStreams.pledgeinsize(codec, -1, e) === :ok
+                    @test TranscodingStreams.pledgeinsize(codec, Int64(-1), e) === :ok
                     @test TranscodingStreams.process(codec, m1, m2, e)[3] === :ok
                     TranscodingStreams.finalize(codec)
                 end
@@ -267,7 +267,7 @@ include("utils.jl")
             GC.@preserve data let m = TranscodingStreams.Memory(pointer(data), length(data))
                 if isdefined(TranscodingStreams, :pledgeinsize)
                     try
-                        TranscodingStreams.pledgeinsize(codec, 10, TranscodingStreams.Error())
+                        TranscodingStreams.pledgeinsize(codec, Int64(10), TranscodingStreams.Error())
                     catch
                     end
                 end
