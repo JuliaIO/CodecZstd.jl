@@ -130,9 +130,17 @@ include("utils.jl")
         @test CodecZstd.find_decompressed_size(v) == 22
 
         codec = ZstdCompressor
-        buffer3 = transcode(codec, b"Hello")
-        buffer4 = transcode(codec, b"World!")
+        sink = IOBuffer()
+        s = TranscodingStream(codec(), sink; stop_on_end=true)
+        write(s, b"Hello")
+        close(s)
+        buffer3 = take!(sink)
         @test CodecZstd.find_decompressed_size(buffer3) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
+        sink = IOBuffer()
+        s = TranscodingStream(codec(), sink; stop_on_end=true)
+        write(s, b"Hello")
+        close(s)
+        buffer4 = take!(sink)
         @test CodecZstd.find_decompressed_size(buffer4) == CodecZstd.ZSTD_CONTENTSIZE_UNKNOWN
 
         write(iob, buffer1)
@@ -154,6 +162,21 @@ include("utils.jl")
             @test CodecZstd.find_decompressed_size(pointer(v), length(buffer1)) == 5
         end
         @test CodecZstd.find_decompressed_size(v) == CodecZstd.ZSTD_CONTENTSIZE_ERROR
+    end
+
+    @testset "pledgeinsize" begin
+        if isdefined(TranscodingStreams, :pledgeinsize)
+            # when pledgeinsize is available transcode should save the 
+            # decompressed size in a header
+            for n in [0:30; 1000; 1000000; 10000000;]
+                a = transcode(ZstdCompressor, rand(UInt8, n))
+                @test CodecZstd.find_decompressed_size(a) == n
+                a = transcode(ZstdCompressor, rand(0x00:0x01, n))
+                @test CodecZstd.find_decompressed_size(a) == n
+                a = transcode(ZstdCompressor, zeros(UInt8, n))
+                @test CodecZstd.find_decompressed_size(a) == n
+            end
+        end
     end
 
     include("compress_endOp.jl")

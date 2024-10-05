@@ -1,4 +1,4 @@
-name: Downstream
+name: Upstream
 on:
   push:
     branches: [master]
@@ -7,16 +7,7 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.package }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package:
-          - "Arrow"
-          - "JLD2"
-          - "HDF5"
-          - "Parquet2"
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -24,7 +15,7 @@ jobs:
           version: 1
           arch: x64
       - uses: julia-actions/julia-buildpkg@latest
-      - name: Load this and run the downstream tests
+      - name: Load the upstream packages and run the tests
         shell: julia --color=yes {0}
         run: |
           using Pkg
@@ -34,7 +25,7 @@ jobs:
           ENV["JULIA_PKG_DEVDIR"]= mktempdir()
           Pkg.develop([
             PackageSpec(path="."),
-            PackageSpec(name="${{ matrix.package }}"),
+            PackageSpec(name="TranscodingStreams"),
           ])
           Pkg.update()
-          Pkg.test("${{ matrix.package }}")
+          Pkg.test("CodecZstd")
