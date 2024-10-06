@@ -101,13 +101,8 @@ function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, error
             return :error
         end
     end
-    code = reset!(codec.cstream)
-    if iserror(code)
-        error[] = ErrorException("zstd error resetting compression context")
-        :error
-    else
-        :ok
-    end
+    reset!(codec.cstream)
+    return :ok
 end
 
 if isdefined(TranscodingStreams, :pledgeinsize)

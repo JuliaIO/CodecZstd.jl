@@ -60,7 +60,11 @@ function reset!(cstream::CStream)
     res = LibZstd.ZSTD_CCtx_reset(cstream, LibZstd.ZSTD_reset_session_only)
     reset!(cstream.ibuffer)
     reset!(cstream.obuffer)
-    return res
+    if iserror(res)
+        # According to zstd.h "Resetting session never fails" so this branch should be unreachable.
+        error("unreachable")
+    end
+    return
 end
 
 """
