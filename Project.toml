@@ -3,7 +3,7 @@ uuid = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
 license = "MIT"
 authors = ["Kenta Sato <bicycle1885@gmail.com>",
            "JuliaIO Github Organization"]
-version = "0.8.5"
+version = "0.8.6"
 
 [deps]
 TranscodingStreams = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
