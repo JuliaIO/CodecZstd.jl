@@ -9,6 +9,16 @@ function zstderror(stream, code::Csize_t)
     ptr = LibZstd.ZSTD_getErrorName(code)
     error("zstd error: ", unsafe_string(ptr))
 end
+function zstderror(code::Csize_t)
+    ptr = LibZstd.ZSTD_getErrorName(code)
+    error("zstd error: ", unsafe_string(ptr))
+end
+function checkerror(code::Csize_t)
+    if iserror(code)
+        zstderror(code)
+    end
+    code
+end
 
 function max_clevel()
     return LibZstd.ZSTD_maxCLevel()
@@ -148,6 +158,188 @@ end
 
 function free!(dstream::DStream)
     return LibZstd.ZSTD_freeDStream(dstream)
+end
+
+# Dictionary
+# ==========
+
+"""
+    CodecZstd.Dictionary(buffer::AbstractVector{UInt8}, samplesBuffers::AbstractVector{UInt8}, sampleSizes::Vector{Csize_t})
+    CodecZstd.Dictionary(samplesBuffers::AbstractVector{UInt8}, sampleSizes::Vector{Csize_t}, bufferCapacity=1024*100)
+    CodecZstd.Dictionary(buffer::AbstractVector{UInt8}, samples::AbstractVector{UInt8}...)
+    CodecZstd.Dictionary(bufferCapacity::Integer, samples::AbstractVector{UInt8}...)
+
+Pre-trained dictionary used to aid ZSTD in the compression of small files.
+`buffer` is pre-allocated UInt8 array used to contain the dictionary.
+`samplesBuffers` is a single UInt8 array that constains the samples of size specified by `sampleSizes`
+`bufferCapacity` specifies the byte size of the buffer to create.
+`samples` is variable number of UInt8 arrays that will be used as samples. They will be concatenated together to form `samplesBuffers`.
+
+Use with `loadDictionary(stream, dictionary)` to load the dictionary into a compression or decompression stream (CStream or DStream).
+"""
+mutable struct Dictionary{B <: AbstractVector{UInt8}}
+    buffer::B
+end
+function Dictionary(buffer::AbstractVector{UInt8}, samplesBuffer::AbstractVector{UInt8}, samplesSizes::Vector{Csize_t})
+    bufferSize = LibZstd.ZDICT_trainFromBuffer(buffer, sizeof(buffer), samplesBuffer, samplesSizes, length(samplesSizes))
+    if LibZstd.ZDICT_isError(bufferSize) != 0
+        throw(ErrorException("Error training Zstd dictionary. ZDICT: " * unsafe_string(LibZstd.ZDICT_getErrorName(bufferSize))))
+    end
+    Dictionary(@view buffer[1:Int(bufferSize)])
+end
+Dictionary(samplesBuffer::AbstractVector{UInt8}, samplesSizes::Vector{Csize_t}, bufferCapacity::Integer=1024*100) =
+    Dictionary(Vector{UInt8}(undef, bufferCapacity), samplesBuffer, samplesSizes)
+Dictionary(buffer::AbstractVector{UInt8}, samples::AbstractVector{UInt8}...) = Dictionary(buffer, vcat(samples...), Csize_t.(lengths.(samples)))
+Dictionary(bufferCapacity::Integer, samples::AbstractVector{UInt8}...) = Dictionary(vcat(samples...), Csize_t.(lengths.(samples)), bufferCapacity)
+
+"""
+    CodecZstd.finalizeDictionary
+
+    See documentation for ZDICT_finalizeDictionary
+"""
+function finalizeDictionary(
+                dstDictBuffer::AbstractVector{UInt8}, dictContent::AbstractVector{UInt8},
+                samplesBuffer::AbstractVector{UInt8}, samplesSizes::Vector{Csize_t},
+                parameters::LibZstd.ZDICT_params_t
+                )
+    bufferSize = 
+    LibZstd.ZDICT_finalizeDictionary(dstDictBuffer, size(dstDictBuffer),
+                                     dictContent,   size(dictContent),
+                                     samplesBuffer,
+                                     samplesSizes, length(samplesSizes),
+                                     parameters
+    )
+    if LibZstd.ZDICT_isError(bufferSize) != 0
+        throw(ErrorException("Error training Zstd dictionary. ZDICT: " * unsafe_string(LibZstd.ZDICT_getErrorName(bufferSize))))
+    end
+    Dictionary(@view dstDictBuffer[1:Int(bufferSize)])
+end
+
+Base.size(dict::Dictionary) = Int.(size(dict.buffer))
+Base.length(dict::Dictionary) = Int(length(dict.buffer))
+Base.pointer(dict::Dictionary) = pointer(dict.buffer)
+Base.unsafe_convert(::Type{Ptr{Nothing}}, dict::Dictionary) = pointer(dict)
+getHeaderSize(dict::Dictionary) = Int(LibZstd.ZDICT_getDictHeaderSize(dict, length(dict)))
+getID(dict::Dictionary) = LibZstd.ZDICT_getDictID(dict, length(dict))
+
+# CDict
+
+# This actually just a box for an opaque pointer
+mutable struct CDict
+    ptr::Ptr{LibZstd.ZSTD_CDict}
+    function CDict(ptr)
+        cdict = new(ptr)
+        finalizer(free!, cdict)
+    end
+end
+createCDict(dict::Dictionary, compressionLevel) =
+    LibZstd.ZSTD_createCDict(dict.buffer, length(dict), compressionLevel)
+free!(ptr::Ptr{CDict}) = LibZstd.ZSTD_freeCDict(ptr)
+free!(cdict::CDict) = free!(cdict.ptr)
+Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_CDict}}, cdict::CDict) = cdict.ptr
+
+function loadDictionary(cstream::CStream, dict::Dictionary)
+    checkerror( LibZstd.ZSTD_CCtx_loadDictionary(cstream, dict, length(dict)) )
+end
+function loadDictionary(cstream::CStream, cdict::CDict)
+    checkerror( LibZstd.ZSTD_CCtx_refCDict(cstream, cdict) )
+end
+
+# DDict
+
+# This actually just a box for an opaque pointer
+mutable struct DDict
+    ptr::Ptr{LibZstd.ZSTD_DDict}
+    function DDict(ptr)
+        ddict = new(ptr)
+        finalizer(free!, ddict)
+    end
+end
+createDDict(dict::Dictionary) = 
+    LibZstd.ZSTD_createDDict(dict.buffer, length(dict))
+free!(ptr::Ptr{DDict}) = LibZstd.ZSTD_freeDDict(ptr)
+free!(ddict::DDict) = free!(ddict.ptr)
+Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DDict}}, cdict::DDict) = cdict.ptr
+
+function loadDictionary(dstream::DStream, dict::Dictionary)
+    checkerror( LibZstd.ZSTD_DCtx_loadDictionary(dstream, dict, length(dict)) )
+end
+function loadDirectory(dstream::DStream, ddict::DDict)
+    checkerror( LibZstd.ZSTD_DCtx_refDDict(dstream, ddict) )
+end
+
+# Parameters
+# ==========
+
+function setParameter(cstream::CStream, parameter::LibZstd.ZSTD_cParameter, value)
+    checkerror( LibZstd.ZSTD_CCtx_setParameter(cstream, parameter, value) )
+end
+function getParameter(cstream::CStream, parameter::LibZstd.ZSTD_cParameter, out=Ref{Cint}())
+    checkerror( LibZstd.ZSTD_CCtx_getParameter(cstream, parameter, out) )
+    out[]
+end
+
+"""
+    CStreamParameters
+
+An AbstractDict interface to that allows retrieving and setting the parameters for a 
+compression stream
+"""
+struct CStreamParameters <: AbstractDict{LibZstd.ZSTD_cParameter, Cint}
+    cstream::CStream
+end
+Base.keys(params::CStreamParameters) = instances(LibZstd.ZSTD_cParameter)
+Base.values(params::CStreamParameters) = (getParameter(params.cstream, param) for param in keys(params))
+Base.getindex(params::CStreamParameters, key::LibZstd.ZSTD_cParameter) = getParameter(params.cstream, key)
+Base.setindex!(params::CStreamParameters, value, key::LibZstd.ZSTD_cParameter) = setParameter(params.cstream, key, value)
+function Base.iterate(params::CStreamParameters, state=1)
+    ks = keys(params)
+    if state <= length(ks)
+        k = ks[state]
+        return (k => params[k], state+1)
+    else
+        return nothing
+    end
+end
+Base.length(::CStreamParameters) = length(instances(LibZstd.ZSTD_cParameter))
+
+function getParameters(cstream::CStream)
+    CStreamParameters(cstream)
+end
+function setParameter(dstream::DStream, parameter::LibZstd.ZSTD_dParameter, value)
+    checkerror( LibZstd.ZSTD_DCtx_setParameter(dstream, parameter, value) )
+end
+function getParameter(dstream::DStream, parameter::LibZstd.ZSTD_dParameter, out=Ref{Cint}())
+    checkerror( LibZstd.ZSTD_DCtx_getParameter(dstream, parameter, out) )
+    out[]
+end
+
+"""
+    DStreamParameters
+
+An AbstractDict that allows retrieving and setting the parameters for a 
+decompression stream
+"""
+struct DStreamParameters <: AbstractDict{LibZstd.ZSTD_dParameter, Cint}
+    dstream::DStream
+end
+Base.keys(params::DStreamParameters) = instances(LibZstd.ZSTD_dParameter)
+Base.values(params::DStreamParameters) = (getParameter(params.dstream, param) for param in keys(params))
+Base.getindex(params::DStreamParameters, key::LibZstd.ZSTD_dParameter) = getParameter(params.dstream, key)
+Base.setindex!(params::DStreamParameters, value, key::LibZstd.ZSTD_dParameter) = setParameter(params.dstream, value, key)
+function Base.iterate(params::DStreamParameters, state=1)
+    ks = keys(params)
+    if state <= length(ks)
+        k = ks[state]
+        return (k => params[k], state+1)
+    else
+        return nothing
+    end
+end
+Base.length(::DStreamParameters) = length(instances(LibZstd.ZSTD_dParameter))
+
+function getParameters(dstream::DStream)
+    DStreamParameters(dstream)
 end
 
 
