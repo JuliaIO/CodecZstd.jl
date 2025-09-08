@@ -56,23 +56,15 @@ function initialize!(cstream::CStream, level::Integer)
     return LibZstd.ZSTD_initCStream(cstream, level)
 end
 
-function reset!(cstream::CStream, srcsize::Integer)
-    # ZSTD_resetCStream is deprecated
-    # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2253-L2272
+function reset!(cstream::CStream)
     res = LibZstd.ZSTD_CCtx_reset(cstream, LibZstd.ZSTD_reset_session_only)
-    if iserror(res)
-        return res
-    end
-    if srcsize == 0
-        # From zstd.h:
-        # Note: ZSTD_resetCStream() interprets pledgedSrcSize == 0 as ZSTD_CONTENTSIZE_UNKNOWN, but
-        # ZSTD_CCtx_setPledgedSrcSize() does not do the same, so ZSTD_CONTENTSIZE_UNKNOWN must be
-        # explicitly specified.
-        srcsize = ZSTD_CONTENTSIZE_UNKNOWN
-    end
     reset!(cstream.ibuffer)
     reset!(cstream.obuffer)
-    return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream, srcsize)
+    if iserror(res)
+        # According to zstd.h "Resetting session never fails" so this branch should be unreachable.
+        error("unreachable")
+    end
+    return
 end
 
 """
