@@ -14,9 +14,7 @@ jobs:
       matrix:
         package:
           - "Arrow"
-          - "JLD2"
           - "HDF5"
-          - "Parquet2"
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2

@@ -35,36 +35,30 @@ end
 
 function TranscodingStreams.finalize(codec::ZstdDecompressor)
     if codec.dstream.ptr != C_NULL
-        code = free!(codec.dstream)
-        if iserror(code)
-            zstderror(codec.dstream, code)
-        end
+        # This should never fail
+        @assert !iserror(free!(codec.dstream))
         codec.dstream.ptr = C_NULL
     end
     return
 end
 
-function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, error::Error)
+function TranscodingStreams.startproc(codec::ZstdDecompressor, mode::Symbol, err::Error)
     if codec.dstream.ptr == C_NULL
-        codec.dstream.ptr = LibZstd.ZSTD_createDStream()
+        codec.dstream.ptr = LibZstd.ZSTD_createDCtx()
         if codec.dstream.ptr == C_NULL
             throw(OutOfMemoryError())
         end
-        i_code = initialize!(codec.dstream)
-        if iserror(i_code)
-            error[] = ErrorException("zstd initialization error")
-            return :error
-        end
+        # TODO Allow setting other parameters here.
     end
     code = reset!(codec.dstream)
     if iserror(code)
-        error[] = ErrorException("zstd error")
+        err[] = ErrorException("zstd initialization error")
         return :error
     end
     return :ok
 end
 
-function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, output::Memory, error::Error)
+function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, output::Memory, err::Error)
     if codec.dstream.ptr == C_NULL
         error("startproc must be called before process")
     end
@@ -79,13 +73,16 @@ function TranscodingStreams.process(codec::ZstdDecompressor, input::Memory, outp
     Δin = Int(dstream.ibuffer.pos)
     Δout = Int(dstream.obuffer.pos)
     if iserror(code)
-        error[] = ErrorException("zstd error")
+        if error_code(code) == Integer(LibZstd.ZSTD_error_memory_allocation)
+            throw(OutOfMemoryError())
+        end
+        err[] = ErrorException("zstd decompression error: " * error_name(code))
         return Δin, Δout, :error
     else
         if code == 0
             return Δin, Δout, :end
         elseif input.size == 0 && code > 0
-            error[] = ErrorException("zstd frame truncated. Expected at least $(code) more bytes")
+            err[] = ErrorException("zstd frame truncated. Expected at least $(code) more bytes")
             return Δin, Δout, :error
         else
             return Δin, Δout, :ok
