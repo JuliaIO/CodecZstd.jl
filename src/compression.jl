@@ -89,7 +89,8 @@ end
 function TranscodingStreams.finalize(codec::ZstdCompressor)
     if codec.cstream.ptr != C_NULL
         # This should never fail
-        @assert !iserror(free!(codec.cstream))
+        ret = free!(codec.cstream)
+        @assert !iserror(ret)
         codec.cstream.ptr = C_NULL
     end
     return
