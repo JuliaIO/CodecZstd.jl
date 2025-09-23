@@ -19,15 +19,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - '1.6'
-          - '1'
         os:
           - ubuntu-latest
           - windows-latest
           - macos-latest
+        version:
+          - '1.6'
+          - '1'
+          - 'pre'
         arch:
-          - x64
+          - 'default'
+          - 'x86'
+        exclude:
+          - os: macos-latest
+            arch: 'x86'
+          - os: macos-latest
+            version: '1.6'
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2

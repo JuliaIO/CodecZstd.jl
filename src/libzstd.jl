@@ -1,13 +1,21 @@
 # Low-level Interfaces
 # ====================
 
-function iserror(code::Csize_t)
-    return LibZstd.ZSTD_isError(code) != 0
+# check if a return value is an error
+function iserror(ret::Csize_t)
+    return LibZstd.ZSTD_isError(ret) != 0
 end
 
-function zstderror(stream, code::Csize_t)
-    ptr = LibZstd.ZSTD_getErrorName(code)
-    error("zstd error: ", unsafe_string(ptr))
+# convert a return value into an error code, which can be compared to error enum list
+function error_code(ret::Csize_t)::Cint
+    # LibZstd.ZSTD_getErrorCode(ret) doesn't work because we
+    # need to accept new error codes that may get added to future zstd versions
+    @ccall libzstd.ZSTD_getErrorCode(ret::Csize_t)::Cint
+end
+
+# convert a return value into an error string for printing
+function error_name(ret::Csize_t)::String
+    unsafe_string(LibZstd.ZSTD_getErrorName(ret))
 end
 
 function max_clevel()
@@ -39,7 +47,7 @@ end
 
 # ZSTD_CStream
 mutable struct CStream
-    ptr::Ptr{LibZstd.ZSTD_CStream}
+    ptr::Ptr{LibZstd.ZSTD_CCtx}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
@@ -48,13 +56,9 @@ mutable struct CStream
     end
 end
 
-Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_CStream}}, cstream::CStream) = cstream.ptr
+Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_CCtx}}, cstream::CStream) = cstream.ptr
 Base.unsafe_convert(::Type{Ptr{InBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{InBuffer}, cstream.ibuffer)
 Base.unsafe_convert(::Type{Ptr{OutBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{OutBuffer}, cstream.obuffer)
-
-function initialize!(cstream::CStream, level::Integer)
-    return LibZstd.ZSTD_initCStream(cstream, level)
-end
 
 function reset!(cstream::CStream, srcsize::Integer)
     # ZSTD_resetCStream is deprecated
@@ -108,17 +112,13 @@ function Base.convert(::Type{LibZstd.ZSTD_EndDirective}, endOp::Symbol)
     return endOp
 end
 
-function finish!(cstream::CStream)
-    return LibZstd.ZSTD_endStream(cstream, cstream.obuffer)
-end
-
 function free!(cstream::CStream)
-    return LibZstd.ZSTD_freeCStream(cstream)
+    return LibZstd.ZSTD_freeCCtx(cstream)
 end
 
 # ZSTD_DStream
 mutable struct DStream
-    ptr::Ptr{LibZstd.ZSTD_DStream}
+    ptr::Ptr{LibZstd.ZSTD_DCtx}
     ibuffer::InBuffer
     obuffer::OutBuffer
 
@@ -126,17 +126,11 @@ mutable struct DStream
         return new(C_NULL, InBuffer(), OutBuffer())
     end
 end
-Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DStream}}, dstream::DStream) = dstream.ptr
+Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DCtx}}, dstream::DStream) = dstream.ptr
 Base.unsafe_convert(::Type{Ptr{InBuffer}}, dstream::DStream) = Ptr{InBuffer}(Base.unsafe_convert(Ptr{InBuffer}, dstream.ibuffer))
 Base.unsafe_convert(::Type{Ptr{OutBuffer}}, dstream::DStream) = Ptr{OutBuffer}(Base.unsafe_convert(Ptr{OutBuffer}, dstream.obuffer))
 
-function initialize!(dstream::DStream)
-    return LibZstd.ZSTD_initDStream(dstream)
-end
-
 function reset!(dstream::DStream)
-    # LibZstd.ZSTD_resetDStream is deprecated
-    # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2332-L2339
     reset!(dstream.ibuffer)
     reset!(dstream.obuffer)
     return LibZstd.ZSTD_DCtx_reset(dstream, LibZstd.ZSTD_reset_session_only)
@@ -147,7 +141,7 @@ function decompress!(dstream::DStream)
 end
 
 function free!(dstream::DStream)
-    return LibZstd.ZSTD_freeDStream(dstream)
+    return LibZstd.ZSTD_freeDCtx(dstream)
 end
 
 
