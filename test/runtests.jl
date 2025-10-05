@@ -244,8 +244,8 @@ include("utils.jl")
         @test codec isa ZstdDecompressor
         @test sprint(show, codec) == "ZstdDecompressor(windowLogMax=Int32($(dbounds[1])))"
 
-        @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ range(dbounds...)
-        @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ range(cbounds...)
+        @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ (:)(dbounds...)
+        @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ (:)(cbounds...)
 
         windowLogs = Int32[
             cbounds[1],

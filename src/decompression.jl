@@ -46,7 +46,7 @@ Advanced decompression parameters.
 function ZstdDecompressor(;
         windowLogMax::Int32=Int32(0),
     )
-    windowLogMax_range = range(windowLogMax_bounds()...)
+    windowLogMax_range = (:)(windowLogMax_bounds()...)
     if !iszero(windowLogMax) && windowLogMax ∉ windowLogMax_range
         throw(ArgumentError("windowLogMax ∈ $(windowLogMax_range) must hold. Got\nwindowLogMax => $(windowLogMax)"))
     end

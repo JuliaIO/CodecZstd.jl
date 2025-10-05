@@ -81,7 +81,7 @@ function ZstdCompressor(;
         level::Integer=DEFAULT_COMPRESSION_LEVEL,
         windowLog::Int32=Int32(0),
     )
-    windowLog_range = range(windowLog_bounds()...)
+    windowLog_range = (:)(windowLog_bounds()...)
     if !iszero(windowLog) && windowLog ∉ windowLog_range
         # Since this has to be matched on the decompression side, throw instead of clamping.
         throw(ArgumentError("windowLog ∈ $(windowLog_range) must hold. Got\nwindowLog => $(windowLog)"))
