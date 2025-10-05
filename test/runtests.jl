@@ -247,7 +247,7 @@ include("utils.jl")
         @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ range(dbounds...)
         @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ range(cbounds...)
 
-        for windowLog in Int32[
+        windowLogs = Int32[
             cbounds[1],
             Int32(0),
             CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT-1,
@@ -255,14 +255,22 @@ include("utils.jl")
             CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT+1,
             cbounds[2]
         ]
-            for windowLogMax in Int32[
-                dbounds[1],
-                Int32(0),
-                CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT-1,
-                CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT,
-                CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT+1,
-                dbounds[2]
-            ]
+        windowLogMaxs = Int32[
+            dbounds[1],
+            Int32(0),
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT-1,
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT,
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT+1,
+            dbounds[2]
+        ]
+        # 32 bit systems don't have enough memory to test upper bound windowLog
+        if Sys.WORD_SIZE == 32
+            pop!(windowLogs)
+            pop!(windowLogMaxs)
+        end
+
+        for windowLog in windowLogs
+            for windowLogMax in windowLogMaxs
                 uncompressed = rand(UInt8, 3000)
                 sink = IOBuffer()
                 # level 22 is needed to get compression to use the full 
