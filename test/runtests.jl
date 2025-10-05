@@ -226,4 +226,82 @@ include("utils.jl")
             end
         end
     end
+
+    @testset "windowLog" begin
+        # out of bounds values
+        cbounds = CodecZstd.windowLog_bounds()
+        dbounds = CodecZstd.windowLogMax_bounds()
+        @test_throws ArgumentError ZstdCompressor(;windowLog=cbounds[2]+Int32(1))
+        @test_throws ArgumentError ZstdCompressor(;windowLog=cbounds[1]-Int32(1))
+        @test_throws ArgumentError ZstdDecompressor(;windowLogMax=dbounds[2]+Int32(1))
+        @test_throws ArgumentError ZstdDecompressor(;windowLogMax=dbounds[1]-Int32(1))
+
+        codec = ZstdCompressor(;level=10, windowLog=cbounds[1])
+        @test codec isa ZstdCompressor
+        @test sprint(show, codec) == "ZstdCompressor(level=10, windowLog=Int32($(cbounds[1])))"
+
+        codec = ZstdDecompressor(;windowLogMax=dbounds[1])
+        @test codec isa ZstdDecompressor
+        @test sprint(show, codec) == "ZstdDecompressor(windowLogMax=Int32($(dbounds[1])))"
+
+        @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ (:)(dbounds...)
+        @test CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT ∈ (:)(cbounds...)
+
+        windowLogs = Int32[
+            cbounds[1],
+            Int32(0),
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT-1,
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT,
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT+1,
+            cbounds[2]
+        ]
+        windowLogMaxs = Int32[
+            dbounds[1],
+            Int32(0),
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT-1,
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT,
+            CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT+1,
+            dbounds[2]
+        ]
+        # 32 bit systems don't have enough memory to test upper bound windowLog
+        if Sys.WORD_SIZE == 32
+            pop!(windowLogs)
+            pop!(windowLogMaxs)
+        end
+
+        for windowLog in windowLogs
+            for windowLogMax in windowLogMaxs
+                uncompressed = rand(UInt8, 3000)
+                sink = IOBuffer()
+                # level 22 is needed to get compression to use the full 
+                # ZSTD_WINDOWLOG_LIMIT_DEFAULT when windowLog is 0
+                compressor = TranscodingStream(ZstdCompressor(;level = 22, windowLog), sink; stop_on_end=true)
+                write(compressor, uncompressed)
+                close(compressor)
+                compressed = take!(sink)
+
+                decompressor = TranscodingStream(ZstdDecompressor(;windowLogMax), IOBuffer(compressed))
+
+                actual_windowLog = if iszero(windowLog)
+                    CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT
+                else
+                    windowLog
+                end
+                actual_windowLogMax = if iszero(windowLogMax)
+                    CodecZstd.ZSTD_WINDOWLOG_LIMIT_DEFAULT
+                else
+                    windowLogMax
+                end
+                if actual_windowLogMax ≥ actual_windowLog
+                    @test read(decompressor) == uncompressed
+                else
+                    @test_throws(
+                        ErrorException("zstd decompression error: Window size larger than maximum.\nHint: try increasing `windowLogMax` when constructing the `ZstdDecompressor`"),
+                        read(decompressor),
+                    )
+                end
+                close(decompressor)
+            end
+        end
+    end
 end

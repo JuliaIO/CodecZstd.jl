@@ -4,6 +4,7 @@
 struct ZstdCompressor <: TranscodingStreams.Codec
     cstream::CStream
     level::Int
+    windowLog::Int32
     endOp::LibZstd.ZSTD_EndDirective
 end
 
@@ -11,12 +12,42 @@ function Base.show(io::IO, codec::ZstdCompressor)
     if codec.endOp == LibZstd.ZSTD_e_end
         print(io, "ZstdFrameCompressor(level=$(codec.level))")
     else
-        print(io, summary(codec), "(level=$(codec.level))")
+        print(io, summary(codec), "(")
+        print(io, "level=$(codec.level)")
+        if codec.windowLog != Int32(0)
+            print(io, ", windowLog=Int32($(codec.windowLog))")
+        end
+        print(io, ")")
     end
 end
 
 # Same as the zstd command line tool (v1.2.0).
 const DEFAULT_COMPRESSION_LEVEL = 3
+
+# This is technically part of the static api, but I don't see how this could be changed easily.
+const ZSTD_WINDOWLOG_LIMIT_DEFAULT = Int32(27)
+
+"""
+    level_bounds() -> min::Int32, max::Int32
+
+Return the minimum and maximum compression levels available.
+"""
+function level_bounds()
+    bounds = LibZstd.ZSTD_cParam_getBounds(LibZstd.ZSTD_c_compressionLevel)
+    @assert !iserror(bounds.error)
+    Int32(bounds.lowerBound), Int32(bounds.upperBound)
+end
+
+"""
+    windowLog_bounds() -> min::Int32, max::Int32
+
+Return the minimum and maximum windowLog available.
+"""
+function windowLog_bounds()
+    bounds = LibZstd.ZSTD_cParam_getBounds(LibZstd.ZSTD_c_windowLog)
+    @assert !iserror(bounds.error)
+    Int32(bounds.lowerBound), Int32(bounds.upperBound)
+end
 
 """
     ZstdCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
@@ -31,11 +62,36 @@ Arguments
   The library also offers negative compression levels,
   which extend the range of speed vs. ratio preferences.
   The lower the level, the faster the speed (at the cost of compression).
-  0 is a special value for `ZSTD_defaultCLevel()`.
-  The level will be clamped to the range `ZSTD_minCLevel()` to `ZSTD_maxCLevel()`.
+  0 is a special value for the default level of the c library.
+  The level will be clamped by `level_bounds()`.
+
+Advanced compression parameters.
+
+- `windowLog::Int32= Int32(0)`: Maximum allowed back-reference distance, expressed as power of 2.
+
+  This will set a memory budget for streaming decompression,
+  with larger values requiring more memory
+  and typically compressing more.
+  Must be clamped between `windowLog_bounds()[1]` and `windowLog_bounds()[2]` inclusive.
+  Special: value 0 means "use default windowLog".
+  Note: Using a windowLog greater than $(ZSTD_WINDOWLOG_LIMIT_DEFAULT)
+  requires explicitly allowing such size at streaming decompression stage.
 """
-function ZstdCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
-    ZstdCompressor(CStream(), clamp(level, LibZstd.ZSTD_minCLevel(), LibZstd.ZSTD_maxCLevel()))
+function ZstdCompressor(;
+        level::Integer=DEFAULT_COMPRESSION_LEVEL,
+        windowLog::Int32=Int32(0),
+    )
+    windowLog_range = (:)(windowLog_bounds()...)
+    if !iszero(windowLog) && windowLog ∉ windowLog_range
+        # Since this has to be matched on the decompression side, throw instead of clamping.
+        throw(ArgumentError("windowLog ∈ $(windowLog_range) must hold. Got\nwindowLog => $(windowLog)"))
+    end
+    ZstdCompressor(
+        CStream(),
+        clamp(level, level_bounds()...),
+        windowLog,
+        LibZstd.ZSTD_e_continue,
+    )
 end
 ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, :continue)
 
@@ -54,10 +110,15 @@ Arguments
   which extend the range of speed vs. ratio preferences.
   The lower the level, the faster the speed (at the cost of compression).
   0 is a special value for `ZSTD_defaultCLevel()`.
-  The level will be clamped to the range `ZSTD_minCLevel()` to `ZSTD_maxCLevel()`.
+  The level will be clamped by `level_bounds()`.
 """
 function ZstdFrameCompressor(;level::Integer=DEFAULT_COMPRESSION_LEVEL)
-    ZstdCompressor(CStream(), clamp(level, LibZstd.ZSTD_minCLevel(), LibZstd.ZSTD_maxCLevel()), :end)
+    ZstdCompressor(
+        CStream(),
+        clamp(level, level_bounds()...),
+        Int32(0),
+        LibZstd.ZSTD_e_end,
+    )
 end
 # pretend that ZstdFrameCompressor is a compressor type
 function TranscodingStreams.transcode(C::typeof(ZstdFrameCompressor), args...)
@@ -78,7 +139,7 @@ const ZstdCompressorStream{S} = TranscodingStream{ZstdCompressor,S} where S<:IO
 Create a new zstd compression stream (see `ZstdCompressor` for `kwargs`).
 """
 function ZstdCompressorStream(stream::IO; kwargs...)
-    x, y = splitkwargs(kwargs, (:level,))
+    x, y = splitkwargs(kwargs, (:level, :windowLog))
     return TranscodingStream(ZstdCompressor(;x...), stream; y...)
 end
 
@@ -105,12 +166,20 @@ function TranscodingStreams.startproc(codec::ZstdCompressor, mode::Symbol, err::
             throw(OutOfMemoryError())
         end
         ret = LibZstd.ZSTD_CCtx_setParameter(codec.cstream, LibZstd.ZSTD_c_compressionLevel, clamp(codec.level, Cint))
-        # TODO Allow setting other parameters here.
         if iserror(ret)
             # This is unreachable according to zstd.h
-            err[] = ErrorException("zstd initialization error")
+            err[] = ErrorException("zstd error setting compressionLevel")
             return :error
         end
+        if !iszero(codec.windowLog)
+            ret = LibZstd.ZSTD_CCtx_setParameter(codec.cstream, LibZstd.ZSTD_c_windowLog, Cint(codec.windowLog))
+            if iserror(ret)
+                # This should be unreachable because windowLog is checked in the constructor.
+                err[] = ErrorException("zstd error setting windowLog to $(codec.windowLog)")
+                return :error
+            end
+        end
+        # TODO Allow setting other parameters here.
     end
     code = reset!(codec.cstream, 0 #=unknown source size=#)
     if iserror(code)
