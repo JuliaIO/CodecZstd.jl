@@ -93,7 +93,6 @@ function ZstdCompressor(;
         LibZstd.ZSTD_e_continue,
     )
 end
-ZstdCompressor(cstream, level) = ZstdCompressor(cstream, level, Int32(0), :continue)
 
 """
    ZstdFrameCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
