@@ -14,7 +14,13 @@ jobs:
       matrix:
         package:
           - "Arrow"
+          - "Avro"
+          - "BGEN"
           - "HDF5"
+          - "JetReconstruction"
+          - "Parquet"
+          - "SquashFS"
+          - "Thrift"
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
