@@ -94,6 +94,11 @@ function ZstdCompressor(;
     )
 end
 
+function ZstdCompressor(cstream, level)
+    Base.depwarn("ZstdCompressor(cstream, level) is deprecated, use the keyword argument constructor ZstdCompressor(; level=...) instead", :ZstdCompressor)
+    ZstdCompressor(cstream, level, Int32(0), LibZstd.ZSTD_e_continue)
+end
+
 """
    ZstdFrameCompressor(;level=$(DEFAULT_COMPRESSION_LEVEL))
 
