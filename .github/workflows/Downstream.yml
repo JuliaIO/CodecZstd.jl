@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - "Arrow"
+          # - "Arrow" # Disabled because the tests take over an hour to run
           - "Avro"
           - "BGEN"
           - "HDF5"
