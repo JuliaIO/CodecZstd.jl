@@ -185,7 +185,7 @@ include("utils.jl")
                     @test TranscodingStreams.startproc(codec, :read, e) === :ok
                     @test TranscodingStreams.pledgeinsize(codec, Int64(10), e) === :ok
                     @test TranscodingStreams.process(codec, m1, m2, e) === (0, 0, :error)
-                    @test e[] == ErrorException("zstd error: Src size is incorrect")
+                    @test e[] == ErrorException("zstd compression error: Src size is incorrect")
                     TranscodingStreams.finalize(codec)
                 end
                 @testset "too few bytes" begin
@@ -198,7 +198,7 @@ include("utils.jl")
                     @test TranscodingStreams.process(codec, m1, m2, e)[3] === :ok
                     m1 = TranscodingStreams.Memory(pointer(d1), 0)
                     @test TranscodingStreams.process(codec, m1, m2, e)[3] === :error
-                    @test e[] == ErrorException("zstd error: Src size is incorrect")
+                    @test e[] == ErrorException("zstd compression error: Src size is incorrect")
                     TranscodingStreams.finalize(codec)
                 end
                 @testset "set pledgeinsize after process" begin
