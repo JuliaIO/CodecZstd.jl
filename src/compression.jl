@@ -206,7 +206,7 @@ end
 
 function TranscodingStreams.process(codec::ZstdCompressor, input::Memory, output::Memory, err::Error)
     if codec.cstream.ptr == C_NULL
-        Base.error("`startproc` must be called before `process`")
+        error("startproc must be called before process")
     end
     cstream = codec.cstream
     ibuffer_starting_pos = UInt(0)
