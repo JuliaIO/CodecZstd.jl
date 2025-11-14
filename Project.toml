@@ -10,6 +10,6 @@ TranscodingStreams = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 Zstd_jll = "3161d3a3-bdf6-5164-811a-617609db77b4"
 
 [compat]
-TranscodingStreams = "0.11.3"
+TranscodingStreams = "0.9, 0.10, 0.11"
 Zstd_jll = "1.5.5"
 julia = "1.6"
