@@ -7,6 +7,17 @@ export
     ZstdDecompressor,
     ZstdDecompressorStream
 
+if VERSION >= v"1.11.0-DEV.469"
+    eval(Meta.parse("""
+        public
+            level_bounds,
+            windowLog_bounds,
+            windowLogMax_bounds,
+            DEFAULT_COMPRESSION_LEVEL,
+            ZSTD_WINDOWLOG_LIMIT_DEFAULT
+    """))
+end
+
 import TranscodingStreams:
     TranscodingStreams,
     TranscodingStream,
