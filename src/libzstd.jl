@@ -60,23 +60,17 @@ Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_CCtx}}, cstream::CStream) = cstream.
 Base.unsafe_convert(::Type{Ptr{InBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{InBuffer}, cstream.ibuffer)
 Base.unsafe_convert(::Type{Ptr{OutBuffer}}, cstream::CStream) = Base.unsafe_convert(Ptr{OutBuffer}, cstream.obuffer)
 
-function reset!(cstream::CStream, srcsize::Integer)
+function reset!(cstream::CStream)
     # ZSTD_resetCStream is deprecated
     # https://github.com/facebook/zstd/blob/9d2a45a705e22ad4817b41442949cd0f78597154/lib/zstd.h#L2253-L2272
     res = LibZstd.ZSTD_CCtx_reset(cstream, LibZstd.ZSTD_reset_session_only)
-    if iserror(res)
-        return res
-    end
-    if srcsize == 0
-        # From zstd.h:
-        # Note: ZSTD_resetCStream() interprets pledgedSrcSize == 0 as ZSTD_CONTENTSIZE_UNKNOWN, but
-        # ZSTD_CCtx_setPledgedSrcSize() does not do the same, so ZSTD_CONTENTSIZE_UNKNOWN must be
-        # explicitly specified.
-        srcsize = ZSTD_CONTENTSIZE_UNKNOWN
-    end
     reset!(cstream.ibuffer)
     reset!(cstream.obuffer)
-    return LibZstd.ZSTD_CCtx_setPledgedSrcSize(cstream, srcsize)
+    if iserror(res)
+        # According to zstd.h "Resetting session never fails" so this branch should be unreachable.
+        error("unreachable")
+    end
+    return
 end
 
 """
