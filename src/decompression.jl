@@ -74,7 +74,6 @@ function TranscodingStreams.finalize(codec::ZstdDecompressor)
         # This should never fail
         ret = free!(codec.dstream)
         @assert !iserror(ret)
-        codec.dstream.ptr = C_NULL
     end
     return
 end

@@ -47,3 +47,8 @@ This package exports following codecs and streams:
 Version 0.8.3 also introduced the virtual codec `ZstdFrameCompressor` which stores the decompressed content size in the frame header. Currently, `ZstdFrameCompressor` is an alternate constructor for `ZstdCompressor`, but that is an implementation detail which should not be relied upon.
 
 See docstrings and [TranscodingStreams.jl](https://github.com/JuliaIO/TranscodingStreams.jl) for details.
+
+Close streams, or call `TranscodingStreams.finalize(codec)` when finished with a
+codec instance, to release native memory promptly. The array API handles this
+cleanup when passed a codec type. Unreachable native contexts also have a garbage
+collection finalizer as a fallback, but its timing is not deterministic.

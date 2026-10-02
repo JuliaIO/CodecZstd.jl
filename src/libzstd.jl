@@ -52,7 +52,9 @@ mutable struct CStream
     obuffer::OutBuffer
 
     function CStream()
-        return new(C_NULL, InBuffer(), OutBuffer())
+        cstream = new(C_NULL, InBuffer(), OutBuffer())
+        finalizer(free!, cstream)
+        return cstream
     end
 end
 
@@ -107,7 +109,10 @@ function Base.convert(::Type{LibZstd.ZSTD_EndDirective}, endOp::Symbol)
 end
 
 function free!(cstream::CStream)
-    return LibZstd.ZSTD_freeCCtx(cstream)
+    cstream.ptr == C_NULL && return Csize_t(0)
+    ret = LibZstd.ZSTD_freeCCtx(cstream)
+    cstream.ptr = C_NULL
+    return ret
 end
 
 # ZSTD_DStream
@@ -117,7 +122,9 @@ mutable struct DStream
     obuffer::OutBuffer
 
     function DStream()
-        return new(C_NULL, InBuffer(), OutBuffer())
+        dstream = new(C_NULL, InBuffer(), OutBuffer())
+        finalizer(free!, dstream)
+        return dstream
     end
 end
 Base.unsafe_convert(::Type{Ptr{LibZstd.ZSTD_DCtx}}, dstream::DStream) = dstream.ptr
@@ -135,7 +142,10 @@ function decompress!(dstream::DStream)
 end
 
 function free!(dstream::DStream)
-    return LibZstd.ZSTD_freeDCtx(dstream)
+    dstream.ptr == C_NULL && return Csize_t(0)
+    ret = LibZstd.ZSTD_freeDCtx(dstream)
+    dstream.ptr = C_NULL
+    return ret
 end
 
 

@@ -4,7 +4,8 @@ include("LibZstd_clang_static.jl")
 
 """
 Zstandard has a static-only API meant for functions that may change over time.
-These tests use the static-only API to test `find_decompressed_size`
+These tests use the static-only API to test `find_decompressed_size` and to
+count native allocations when checking context cleanup.
 """
 
 @testset "find_decompressed_size (with static-only API)" begin
@@ -73,4 +74,72 @@ These tests use the static-only API to test `find_decompressed_size`
         end
     end
 
+end
+
+const zstd_live_allocations = Ref(0)
+function tracked_zstd_alloc(::Ptr{Cvoid}, size::Csize_t)::Ptr{Cvoid}
+    ptr = Base.Libc.malloc(size)
+    ptr != C_NULL && (zstd_live_allocations[] += 1)
+    return ptr
+end
+function tracked_zstd_free(::Ptr{Cvoid}, ptr::Ptr{Cvoid})::Cvoid
+    ptr != C_NULL && (zstd_live_allocations[] -= 1)
+    Base.Libc.free(ptr)
+    return nothing
+end
+const tracked_zstd_memory = LibZstdStatic.ZSTD_customMem(
+    @cfunction(tracked_zstd_alloc, Ptr{Cvoid}, (Ptr{Cvoid}, Csize_t)),
+    @cfunction(tracked_zstd_free, Cvoid, (Ptr{Cvoid}, Ptr{Cvoid})),
+    C_NULL,
+)
+
+@noinline function tracked_zstd_stream(Codec, input, explicitly_close)
+    codec = Codec()
+    native = if codec isa ZstdCompressor
+        codec.cstream.ptr = Ptr{CodecZstd.LibZstd.ZSTD_CCtx}(
+            LibZstdStatic.ZSTD_createCCtx_advanced(tracked_zstd_memory))
+        codec.cstream
+    else
+        codec.dstream.ptr = Ptr{CodecZstd.LibZstd.ZSTD_DCtx}(
+            LibZstdStatic.ZSTD_createDCtx_advanced(tracked_zstd_memory))
+        codec.dstream
+    end
+    @test native.ptr != C_NULL
+    stream = TranscodingStream(codec, IOBuffer(input))
+    read(stream, UInt8)
+    ptr = native.ptr
+    GC.@preserve stream begin
+        GC.gc(true)
+        @test zstd_live_allocations[] > 0
+        @test native.ptr == ptr
+        @test read(stream, UInt8) isa UInt8
+    end
+    if explicitly_close
+        close(stream)
+        @test zstd_live_allocations[] == 0
+    end
+    return WeakRef(native), ptr
+end
+
+@testset "native context cleanup" begin
+    input = rand(UInt8, 1000)
+    compressed = transcode(ZstdCompressor, input)
+    for (Codec, data) in ((ZstdCompressor, input), (ZstdDecompressor, compressed)),
+        explicitly_close in (true, false)
+        @test zstd_live_allocations[] == 0
+        weak, ptr = tracked_zstd_stream(Codec, data, explicitly_close)
+        for _ in 1:3
+            GC.gc(true)
+        end
+        @test weak.value === nothing
+        @test zstd_live_allocations[] == 0
+        if zstd_live_allocations[] != 0 && weak.value === nothing
+            # Release native memory if its owner was collected without freeing it.
+            if Codec === ZstdCompressor
+                CodecZstd.LibZstd.ZSTD_freeCCtx(ptr)
+            else
+                CodecZstd.LibZstd.ZSTD_freeDCtx(ptr)
+            end
+        end
+    end
 end
