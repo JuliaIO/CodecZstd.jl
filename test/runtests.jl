@@ -229,6 +229,30 @@ include("utils.jl")
     include("compress_endOp.jl")
     include("static_only_tests.jl")
 
+    @testset "context finalizers" begin
+        data = rand(UInt8, 1000)
+        compressed = transcode(ZstdCompressor, data)
+        for (Codec, input, field) in ((ZstdCompressor, data, :cstream),
+                                     (ZstdFrameCompressor, data, :cstream),
+                                     (ZstdDecompressor, compressed, :dstream))
+            codec = Codec()
+            native = getfield(codec, field)
+            @test native.ptr == C_NULL
+            @test TranscodingStreams.finalize(codec) === nothing
+            result = transcode(codec, input)
+            @test native.ptr != C_NULL
+            @test TranscodingStreams.finalize(codec) === nothing
+            @test TranscodingStreams.finalize(codec) === nothing
+            @test native.ptr == C_NULL
+            @test transcode(codec, input) == result
+            @test native.ptr != C_NULL
+            # Run the owner's registered GC fallback deterministically.
+            Base.finalize(native)
+            @test native.ptr == C_NULL
+            @test TranscodingStreams.finalize(codec) === nothing
+        end
+    end
+
     @testset "reusing a compressor" begin
         compressor = ZstdCompressor()
         x = rand(UInt8, 1000)

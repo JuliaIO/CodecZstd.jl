@@ -34,6 +34,7 @@ jobs:
         shell: julia --color=yes {0}
         run: |
           using Pkg
+          codec_path = pwd()
           Pkg.Registry.update()
           Pkg.activate(;temp=true)
           # force it to use this PR's version of the package
@@ -41,5 +42,10 @@ jobs:
             PackageSpec(path="."),
             PackageSpec(name="${{ matrix.package }}"),
           ])
+          if "${{ matrix.package }}" == "HDF5"
+            # Resolve HDF5's relative [sources] paths from its own project.
+            Pkg.activate(dirname(dirname(Base.find_package("HDF5"))))
+            Pkg.develop(path=codec_path)
+          end
           Pkg.update()
           Pkg.test("${{ matrix.package }}")
